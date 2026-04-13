@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart POS — Cashier</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #0a0e17;
+      --surface:    #111827;
+      --surface2:   #1a2235;
+      --border:     rgba(255,255,255,0.06);
+      --border2:    rgba(255,255,255,0.10);
+      --text:       #e2e8f0;
+      --text-muted: #64748b;
+      --text-dim:   #334155;
+      --teal:       #14b8a6;
+      --teal-dark:  #0f766e;
+      --teal-glow:  rgba(20,184,166,0.15);
+      --cyan:       #06b6d4;
+      --red:        #f87171;
+      --red-bg:     rgba(248,113,113,0.08);
+      --green:      #34d399;
+      --green-bg:   rgba(52,211,153,0.08);
+      --amber:      #fbbf24;
+      --radius:     14px;
+      --radius-sm:  8px;
+    }
+
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 16px 80px;
+    }
+
+    /* ── Subtle grid background ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 680px;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 36px;
+    }
+    .logo {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--teal), var(--cyan));
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900; font-size: 18px; color: #fff;
+      box-shadow: 0 8px 24px rgba(20,184,166,0.3);
+      flex-shrink: 0;
+    }
+    .header-text h1 {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #fff;
+    }
+    .header-text p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .header-badge {
+      margin-left: auto;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: var(--teal-glow);
+      color: var(--teal);
+      border: 1px solid rgba(20,184,166,0.2);
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    /* ── Note Input ── */
+    .note-input {
+      width: 100%;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+      resize: none;
+      height: 60px;
+    }
+    .note-input::placeholder { color: var(--text-dim); }
+    .note-input:focus { border-color: var(--teal); }
+
+    /* ── Product rows ── */
+    #products-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .product-row {
+      display: grid;
+      grid-template-columns: 1fr 140px 40px;
+      gap: 8px;
+      align-items: center;
+      animation: slide-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    @keyframes slide-in {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .product-row .row-num {
+      grid-column: 1 / -1;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      margin-bottom: -4px;
+    }
+    .product-row:first-child .row-num { display: none; }
+
+    .input-wrap {
+      position: relative;
+    }
+    .input-wrap .input-label {
+      position: absolute;
+      top: -8px; left: 10px;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--surface);
+      padding: 0 4px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    input[type="text"]::placeholder,
+    input[type="number"]::placeholder { color: var(--text-dim); }
+    input[type="text"]:focus,
+    input[type="number"]:focus {
+      border-color: var(--teal);
+      background: rgba(20,184,166,0.04);
+    }
+    input[type="number"] {
+      font-family: 'DM Mono', monospace;
+    }
+    /* hide number spinners */
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+    .btn-remove {
+      width: 38px; height: 38px;
+      border-radius: var(--radius-sm);
+      background: rgba(248,113,113,0.08);
+      border: 1px solid rgba(248,113,113,0.15);
+      color: var(--red);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, border-color 0.15s, transform 0.15s;
+      flex-shrink: 0;
+    }
+    .btn-remove:hover {
+      background: rgba(248,113,113,0.18);
+      border-color: rgba(248,113,113,0.3);
+      transform: scale(1.05);
+    }
+    .btn-remove:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+
+    /* ── Action buttons ── */
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn-add {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 18px;
+      border-radius: var(--radius-sm);
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .btn-add:hover {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.15);
+    }
+    .btn-add svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+    .btn-submit {
+      margin-left: auto;
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 24px;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(135deg, var(--teal), var(--cyan));
+      border: none;
+      color: #fff;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 4px 16px rgba(20,184,166,0.25);
+    }
+    .btn-submit:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(20,184,166,0.35);
+    }
+    .btn-submit:active { transform: translateY(0); }
+    .btn-submit:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+    .btn-submit svg { width: 16px; height: 16px; }
+
+    /* ── Summary ── */
+    .summary {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+    }
+    .summary-item {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      text-align: center;
+    }
+    .summary-item .val {
+      font-size: 22px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.5px;
+      font-family: 'DM Mono', monospace;
+    }
+    .summary-item .val.teal { color: var(--teal); }
+    .summary-item .lbl {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+    }
+
+    /* ── Toast notification ── */
+    #toast {
+      position: fixed;
+      bottom: 28px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      min-width: 280px; max-width: 420px;
+      padding: 14px 20px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 600;
+      display: flex; align-items: center; gap: 10px;
+      z-index: 100;
+      transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s;
+      opacity: 0;
+      pointer-events: none;
+    }
+    #toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+    #toast.success {
+      background: var(--surface);
+      border: 1px solid rgba(52,211,153,0.3);
+      color: var(--green);
+    }
+    #toast.error {
+      background: var(--surface);
+      border: 1px solid rgba(248,113,113,0.3);
+      color: var(--red);
+    }
+    #toast svg { width: 18px; height: 18px; flex-shrink: 0; }
+    #toast .toast-detail { font-size: 11px; color: var(--text-muted); font-weight: 400; margin-top: 1px; }
+
+    /* ── JSON Preview ── */
+    #json-preview-card { display: none; }
+    #json-preview-card.visible { display: block; }
+    #json-output {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: #94a3b8;
+      white-space: pre;
+      overflow-x: auto;
+      line-height: 1.6;
+    }
+    #json-output .key   { color: #38bdf8; }
+    #json-output .str   { color: #86efac; }
+    #json-output .num   { color: #fbbf24; }
+
+    /* ── Divider ── */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 16px 0;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+    @media (max-width: 520px) {
+      .product-row { grid-template-columns: 1fr 110px 38px; }
+      .summary { grid-template-columns: 1fr 1fr; }
+      .actions { flex-direction: column; }
+      .btn-submit { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">P</div>
+    <div class="header-text">
+      <h1>Smart POS</h1>
+      <p>Cashier Product Entry</p>
+    </div>
+    <div class="header-badge">● Live</div>
+  </div>
+
+  <!-- Summary Card -->
+  <div class="card">
+    <div class="card-title">Session Summary</div>
+    <div class="summary">
+      <div class="summary-item">
+        <div class="val" id="sum-count">0</div>
+        <div class="lbl">Products</div>
+      </div>
+      <div class="summary-item">
+        <div class="val teal" id="sum-total">$0.00</div>
+        <div class="lbl">Total Value</div>
+      </div>
+      <div class="summary-item">
+        <div class="val" id="sum-avg">$0.00</div>
+        <div class="lbl">Avg Price</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Products Card -->
+  <div class="card">
+    <div class="card-title">Product List</div>
+
+    <div id="products-container">
+      <!-- rows injected by JS -->
+    </div>
+
+    <div class="actions">
+      <button class="btn-add" onclick="addRow()">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        Add Product
+      </button>
+      <button class="btn-submit" id="btn-submit" onclick="submitProducts()">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+        Submit to Admin
+      </button>
+    </div>
+  </div>
+
+  <!-- Note Card -->
+  <div class="card">
+    <div class="card-title">Cashier Note <span style="color:var(--text-dim);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></div>
+    <textarea id="cashier-note" class="note-input" placeholder="e.g. Morning shift – daily specials batch..."></textarea>
+  </div>
+
+  <!-- Branch Selector -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title">Branch</div>
+    <div class="input-wrap">
+      <span class="input-label">Select Branch</span>
+      <select id="branch-select" style="
+        width:100%;
+        background:rgba(255,255,255,0.03);
+        border:1px solid var(--border2);
+        border-radius:var(--radius-sm);
+        padding:10px 14px;
+        font-family:inherit;
+        font-size:13px;
+        color:var(--text);
+        outline:none;
+        transition:border-color 0.2s;
+        appearance:none;
+        cursor:pointer;
+      ">
+        <option value="UNKNOWN" style="background:#111827">— Select your branch —</option>
+        <option value="BR-001" style="background:#111827">BR-001 · Downtown Central (New York)</option>
+        <option value="BR-002" style="background:#111827">BR-002 · Airport Terminal (New York)</option>
+        <option value="BR-003" style="background:#111827">BR-003 · Mall of Commerce (Chicago)</option>
+        <option value="BR-004" style="background:#111827">BR-004 · Suburb East (Chicago)</option>
+        <option value="BR-005" style="background:#111827">BR-005 · Harbor Point (San Francisco)</option>
+        <option value="BR-006" style="background:#111827">BR-006 · Old Town Plaza (Boston)</option>
+        <option value="BR-007" style="background:#111827">BR-007 · Tech Park (Austin)</option>
+        <option value="BR-008" style="background:#111827">BR-008 · Riverside Station (Portland)</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- JSON Preview Card (shown after submit) -->
+  <div class="card" id="json-preview-card">
+    <div class="card-title">Last Submitted Payload</div>
+    <div id="json-output"></div>
+    <div class="divider"></div>
+    <p style="font-size:12px;color:var(--text-muted)">
+      ✓ This JSON was sent to <code style="color:var(--teal);font-family:'DM Mono',monospace">POST /api/products</code> on the admin backend.
+    </p>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div id="toast">
+  <svg id="toast-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"></svg>
+  <div>
+    <div id="toast-msg"></div>
+    <div class="toast-detail" id="toast-detail"></div>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════
+   CONFIG — change this to your backend URL
+   ════════════════════════════════════════════ */
+const API_BASE = "http://localhost:8000/api";
+
+/* ════════════════════════════════════════════
+   STATE
+   ════════════════════════════════════════════ */
+let rowCount = 0;
+
+/* ════════════════════════════════════════════
+   INIT — start with 3 empty rows
+   ════════════════════════════════════════════ */
+window.onload = () => {
+  addRow(); addRow(); addRow();
+};
+
+/* ════════════════════════════════════════════
+   ADD / REMOVE ROWS
+   ════════════════════════════════════════════ */
+function addRow() {
+  rowCount++;
+  const idx = rowCount;
+  const container = document.getElementById("products-container");
+
+  const div = document.createElement("div");
+  div.className = "product-row";
+  div.id = `row-${idx}`;
+  div.innerHTML = `
+    <div class="row-num">Product #${idx}</div>
+    <div class="input-wrap">
+      <span class="input-label">Name</span>
+      <input type="text" id="name-${idx}" placeholder="e.g. Espresso" oninput="updateSummary()" />
+    </div>
+    <div class="input-wrap">
+      <span class="input-label">Price ($)</span>
+      <input type="number" id="price-${idx}" placeholder="0.00" min="0" step="0.01" oninput="updateSummary()" />
+    </div>
+    <button class="btn-remove" onclick="removeRow(${idx})" title="Remove product">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M18 6L6 18M6 6l12 12"/>
+      </svg>
+    </button>
+  `;
+  container.appendChild(div);
+  enforceMinRows();
+
+  // focus new name field
+  setTimeout(() => document.getElementById(`name-${idx}`)?.focus(), 50);
+  updateSummary();
+}
+
+function removeRow(idx) {
+  const el = document.getElementById(`row-${idx}`);
+  if (el) {
+    el.style.animation = "none";
+    el.style.opacity = "0";
+    el.style.transform = "translateY(-4px)";
+    el.style.transition = "opacity 0.18s, transform 0.18s";
+    setTimeout(() => { el.remove(); updateSummary(); enforceMinRows(); }, 180);
+  }
+}
+
+function enforceMinRows() {
+  // disable remove button when only 1 row remains
+  const rows = document.querySelectorAll(".product-row");
+  rows.forEach(r => {
+    const btn = r.querySelector(".btn-remove");
+    if (btn) btn.disabled = rows.length <= 1;
+  });
+}
+
+/* ════════════════════════════════════════════
+   COLLECT PRODUCTS
+   ════════════════════════════════════════════ */
+function collectProducts() {
+  const rows = document.querySelectorAll(".product-row");
+  const products = [];
+  rows.forEach(row => {
+    const id = row.id.replace("row-", "");
+    const nameEl  = document.getElementById(`name-${id}`);
+    const priceEl = document.getElementById(`price-${id}`);
+    if (!nameEl || !priceEl) return;
+    const name  = nameEl.value.trim();
+    const price = parseFloat(priceEl.value);
+    if (name) products.push({ name, price: isNaN(price) ? 0 : price });
+  });
+  return products;
+}
+
+/* ════════════════════════════════════════════
+   SUMMARY BAR
+   ════════════════════════════════════════════ */
+function updateSummary() {
+  const products = collectProducts();
+  const count = products.length;
+  const total = products.reduce((s, p) => s + p.price, 0);
+  const avg   = count ? total / count : 0;
+
+  document.getElementById("sum-count").textContent = count;
+  document.getElementById("sum-total").textContent = formatUSD(total);
+  document.getElementById("sum-avg").textContent   = formatUSD(avg);
+}
+
+function formatUSD(n) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+}
+
+/* ════════════════════════════════════════════
+   SUBMIT
+   ════════════════════════════════════════════ */
+async function submitProducts() {
+  const products = collectProducts();
+
+  if (products.length === 0) {
+    showToast("error", "No products to submit", "Add at least one product with a name.");
+    return;
+  }
+
+  const emptyPrice = products.find(p => isNaN(p.price) || p.price === 0);
+  if (emptyPrice) {
+    showToast("error", `"${emptyPrice.name}" has no price`, "Enter a valid price (can be 0.00).");
+    return;
+  }
+
+  const note = document.getElementById("cashier-note").value.trim();
+  const branch_id = document.getElementById("branch-select").value;
+  const payload = { products, cashier_note: note, branch_id };
+
+  const btn = document.getElementById("btn-submit");
+  btn.disabled = true;
+  btn.innerHTML = `
+    <svg style="animation:spin 0.7s linear infinite" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+    </svg>
+    Submitting…
+  `;
+
+  try {
+    const res = await fetch(`${API_BASE}/products`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.detail || `HTTP ${res.status}`);
+    }
+
+    showToast("success", `${products.length} product${products.length > 1 ? "s" : ""} submitted!`, `Batch ID: ${data.batch_id}`);
+    showJsonPreview(payload);
+    clearForm();
+
+  } catch (err) {
+    if (err.message.includes("Failed to fetch") || err.message.includes("NetworkError")) {
+      showToast("error", "Cannot reach backend", "Make sure the FastAPI server is running on port 8000.");
+    } else {
+      showToast("error", "Submission failed", err.message);
+    }
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M5 12h14M12 5l7 7-7 7"/>
+      </svg>
+      Submit to Admin
+    `;
+  }
+}
+
+/* ════════════════════════════════════════════
+   CLEAR FORM AFTER SUBMIT
+   ════════════════════════════════════════════ */
+function clearForm() {
+  document.getElementById("products-container").innerHTML = "";
+  rowCount = 0;
+  document.getElementById("cashier-note").value = "";
+  addRow(); addRow(); addRow();
+  updateSummary();
+}
+
+/* ════════════════════════════════════════════
+   JSON PREVIEW (syntax highlighted)
+   ════════════════════════════════════════════ */
+function showJsonPreview(payload) {
+  const card = document.getElementById("json-preview-card");
+  card.classList.add("visible");
+
+  const json = JSON.stringify(payload, null, 2);
+  // Simple syntax highlight
+  const highlighted = json
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"([^"]+)":/g, '<span class="key">"$1"</span>:')
+    .replace(/: "([^"]*)"/g, ': <span class="str">"$1"</span>')
+    .replace(/: (\d+\.?\d*)/g, ': <span class="num">$1</span>')
+    .replace(/: (true|false|null)/g, ': <span class="num">$1</span>');
+
+  document.getElementById("json-output").innerHTML = highlighted;
+  card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+/* ════════════════════════════════════════════
+   TOAST
+   ════════════════════════════════════════════ */
+let toastTimer = null;
+function showToast(type, msg, detail = "") {
+  const toast = document.getElementById("toast");
+  const icon  = document.getElementById("toast-icon");
+
+  toast.className = `show ${type}`;
+  document.getElementById("toast-msg").textContent = msg;
+  document.getElementById("toast-detail").textContent = detail;
+
+  icon.innerHTML = type === "success"
+    ? '<path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>'
+    : '<path d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>';
+
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toast.classList.remove("show");
+  }, 4500);
+}
+
+/* ════════════════════════════════════════════
+   SPIN KEYFRAME
+   ════════════════════════════════════════════ */
+const style = document.createElement("style");
+style.textContent = `@keyframes spin { to { transform: rotate(360deg); } }`;
+document.head.appendChild(style);
+</script>
+</body>
+</html>
