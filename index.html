@@ -4,105 +4,754 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Smart POS — Admin Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,500;9..40,700;9..40,800&family=DM+Mono:wght@400;500&display=swap');
-    * { font-family: 'DM Sans', system-ui, sans-serif; }
+    /* ════════════════════════════════════════════════════════════════
+       CSS VARIABLES  (mirrors cashier.html tokens exactly)
+    ════════════════════════════════════════════════════════════════ */
+    :root {
+      --bg:          #0a0e17;
+      --bg-light:    #f1f5f9;
+      --surface:     #111827;
+      --surface-lt:  #ffffff;
+      --border-dk:   rgba(255,255,255,0.05);
+      --border-lt:   #e2e8f0;
+      --text-dk:     #f1f5f9;
+      --text-lt:     #0f172a;
+      --muted-dk:    #64748b;
+      --muted-lt:    #94a3b8;
+      --dim-dk:      #475569;
+      --dim-lt:      #94a3b8;
+      --teal:        #14b8a6;
+      --teal-400:    #2dd4bf;
+      --teal-600:    #0d9488;
+      --teal-700:    #0f766e;
+      --cyan:        #06b6d4;
+      --red:         #f87171;
+      --red-500:     #ef4444;
+      --green:       #10b981;
+      --green-400:   #34d399;
+      --amber:       #f59e0b;
+      --amber-400:   #fbbf24;
+      --blue-400:    #60a5fa;
+      --blue-500:    #3b82f6;
+      --violet-400:  #a78bfa;
+      --violet-500:  #8b5cf6;
+      --sidebar-w:   15rem;
+      --topbar-h:    4rem;
+      --radius:      1rem;
+      --radius-sm:   0.5rem;
+      --radius-xl:   0.75rem;
+      /* System font stacks — no external URL needed */
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                   "Helvetica Neue", Arial, sans-serif;
+      --font-mono: "SFMono-Regular", Consolas, "Liberation Mono",
+                   Menlo, "Courier New", monospace;
+    }
 
+    /* ════════════════════════════════════════════════════════════════
+       RESET
+    ════════════════════════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { min-height: 100%; }
+    body { font-family: var(--font-sans); }
+    button { cursor: pointer; background: none; border: none; font: inherit; }
+    input, textarea, select { font: inherit; }
+    table { border-collapse: collapse; width: 100%; }
+    svg { display: block; flex-shrink: 0; }
+
+    /* ════════════════════════════════════════════════════════════════
+       ANIMATIONS
+    ════════════════════════════════════════════════════════════════ */
     @keyframes fade-in  { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
     @keyframes pulse-g  { 0%,100%{opacity:1} 50%{opacity:.55} }
     @keyframes spin     { to{transform:rotate(360deg)} }
     @keyframes flash-in { 0%{background:rgba(20,184,166,.18)} 100%{background:transparent} }
 
-    .fade-in   { animation:fade-in .35s ease-out both }
-    .fade-in-1 { animation-delay:.05s } .fade-in-2 { animation-delay:.10s }
-    .fade-in-3 { animation-delay:.15s } .fade-in-4 { animation-delay:.20s }
-    .pulse-glow{ animation:pulse-g 2.5s ease-in-out infinite }
-    .spin      { animation:spin .7s linear infinite }
-    .new-row   { animation:flash-in 1.8s ease-out }
+    .anim-fade-in { animation: fade-in .35s ease-out both; }
+    .anim-new-row { animation: flash-in 1.8s ease-out; }
 
-    ::-webkit-scrollbar       { width:6px }
-    ::-webkit-scrollbar-track { background:transparent }
-    ::-webkit-scrollbar-thumb { background:#334155;border-radius:3px }
-    .chart-bar { transition:height .6s cubic-bezier(.22,1,.36,1) }
+    /* ════════════════════════════════════════════════════════════════
+       SCROLLBAR
+    ════════════════════════════════════════════════════════════════ */
+    ::-webkit-scrollbar       { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
 
-    /* Live dot */
+    /* ════════════════════════════════════════════════════════════════
+       LIVE DOT
+    ════════════════════════════════════════════════════════════════ */
     .live-dot::before {
-      content:'';display:inline-block;width:7px;height:7px;
-      border-radius:50%;background:#34d399;margin-right:6px;
-      animation:pulse-g 1.8s ease-in-out infinite;
+      content: '';
+      display: inline-block;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #34d399;
+      margin-right: 6px;
+      animation: pulse-g 1.8s ease-in-out infinite;
     }
+
+    /* ════════════════════════════════════════════════════════════════
+       THEME BODY STATES  (toggled via JS)
+    ════════════════════════════════════════════════════════════════ */
+    body.dark  { background: var(--bg);       color: var(--text-dk); }
+    body.light { background: var(--bg-light); color: var(--text-lt); }
+
+    /* ════════════════════════════════════════════════════════════════
+       LOGIN SCREEN
+    ════════════════════════════════════════════════════════════════ */
+    #login-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    #login-card {
+      width: 100%;
+      max-width: 24rem;
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+      border: 1px solid;
+    }
+
+    body.dark  #login-card { background: var(--surface);    border-color: var(--border-dk); }
+    body.light #login-card { background: var(--surface-lt); border-color: var(--border-lt); }
+
+    .login-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    .login-logo {
+      width: 3.5rem; height: 3.5rem;
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, var(--teal), var(--cyan));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 1.25rem;
+      color: #fff;
+      margin-bottom: 1rem;
+      box-shadow: 0 8px 24px rgba(20,184,166,0.25);
+    }
+
+    #login-title { font-size: 1.25rem; font-weight: 700; }
+    #login-sub   { font-size: 0.875rem; margin-top: 0.25rem; }
+
+    body.dark  #login-title { color: #fff; }
+    body.light #login-title { color: var(--text-lt); }
+    body.dark  #login-sub   { color: var(--muted-dk); }
+    body.light #login-sub   { color: var(--muted-lt); }
+
+    #login-error {
+      background: rgba(239,68,68,0.10);
+      border: 1px solid rgba(239,68,68,0.20);
+      color: var(--red);
+      font-size: 0.75rem;
+      border-radius: var(--radius-sm);
+      padding: 0.625rem 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .login-fields { display: flex; flex-direction: column; gap: 1rem; }
+
+    .field-label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.375rem;
+    }
+
+    body.dark  .field-label { color: var(--muted-dk); }
+    body.light .field-label { color: #64748b; }
+
+    .field-input {
+      width: 100%;
+      border-radius: var(--radius-sm);
+      padding: 0.625rem 1rem;
+      font-size: 0.875rem;
+      outline: none;
+      border: 1px solid;
+      transition: border-color .2s;
+    }
+
+    body.dark  .field-input {
+      background: rgba(255,255,255,0.05);
+      border-color: rgba(255,255,255,0.10);
+      color: #fff;
+    }
+    body.light .field-input {
+      background: #f8fafc;
+      border-color: var(--border-lt);
+      color: var(--text-lt);
+    }
+    .field-input:focus { border-color: var(--teal); }
+
+    .btn-login {
+      width: 100%;
+      background: linear-gradient(90deg, var(--teal), var(--cyan));
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.875rem;
+      border-radius: var(--radius-sm);
+      padding: 0.625rem 1rem;
+      margin-top: 0.5rem;
+      transition: opacity .15s;
+      box-shadow: 0 4px 16px rgba(20,184,166,0.20);
+    }
+    .btn-login:hover { opacity: 0.9; }
+
+    #login-hint {
+      font-size: 0.75rem;
+      text-align: center;
+      margin-top: 0.5rem;
+    }
+    body.dark  #login-hint { color: var(--dim-dk); }
+    body.light #login-hint { color: var(--muted-lt); }
+
+    /* ════════════════════════════════════════════════════════════════
+       DASHBOARD LAYOUT
+    ════════════════════════════════════════════════════════════════ */
+    #dashboard { display: none; }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      position: fixed;
+      top: 0; left: 0;
+      height: 100vh;
+      width: var(--sidebar-w);
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid;
+      z-index: 30;
+      transition: all .3s ease;
+    }
+
+    body.dark  #sidebar { background: #0d1117;          border-color: var(--border-dk); }
+    body.light #sidebar { background: var(--surface-lt); border-color: var(--border-lt); }
+
+    #sidebar-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0 1rem;
+      height: var(--topbar-h);
+      border-bottom: 1px solid;
+      flex-shrink: 0;
+    }
+
+    body.dark  #sidebar-header { border-color: var(--border-dk); }
+    body.light #sidebar-header { border-color: #f1f5f9; }
+
+    .sidebar-logo {
+      width: 2.25rem; height: 2.25rem;
+      border-radius: var(--radius-xl);
+      background: linear-gradient(135deg, var(--teal), var(--cyan));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 0.875rem;
+      color: #fff;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(20,184,166,0.20);
+    }
+
+    #sidebar-brand {
+      font-weight: 700;
+      font-size: 0.875rem;
+      letter-spacing: -0.025em;
+    }
+    body.dark  #sidebar-brand { color: #fff; }
+    body.light #sidebar-brand { color: var(--text-lt); }
+
+    #sidebar-nav {
+      flex: 1;
+      padding: 0.75rem 0.5rem;
+      overflow-y: auto;
+    }
+
+    .nav-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      border-radius: var(--radius-xl);
+      padding: 0.625rem 0.75rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all .15s ease;
+      margin-bottom: 0.125rem;
+      text-align: left;
+    }
+
+    .nav-btn.active.dark  { background: rgba(20,184,166,0.10); color: var(--teal-400); }
+    .nav-btn.active.light { background: rgba(20,184,166,0.08); color: var(--teal-700); }
+    .nav-btn.inactive.dark  { color: var(--muted-dk); }
+    .nav-btn.inactive.light { color: #64748b; }
+    .nav-btn.inactive:hover { background: rgba(0,0,0,0.04); }
+
+    .nav-btn svg { width: 1.25rem; height: 1.25rem; flex-shrink: 0; }
+
+    .nav-badge {
+      margin-left: auto;
+      font-size: 10px;
+      font-weight: 700;
+      background: rgba(239,68,68,0.20);
+      color: var(--red);
+      border-radius: 9999px;
+      padding: 0.125rem 0.5rem;
+    }
+
+    #sidebar-bottom {
+      border-top: 1px solid;
+      padding: 0.75rem 0.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      flex-shrink: 0;
+    }
+    body.dark  #sidebar-bottom { border-color: var(--border-dk); }
+    body.light #sidebar-bottom { border-color: #f1f5f9; }
+
+    #live-indicator {
+      display: flex;
+      align-items: center;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    body.dark  #live-indicator { color: var(--green); }
+    body.light #live-indicator { color: #059669; }
+
+    .sidebar-action-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      border-radius: var(--radius-xl);
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      transition: all .15s ease;
+    }
+    .sidebar-action-btn svg { width: 1rem; height: 1rem; }
+    body.dark  .sidebar-action-btn { color: var(--muted-dk); }
+    body.light .sidebar-action-btn { color: var(--muted-lt); }
+    .sidebar-action-btn:hover { background: rgba(0,0,0,0.04); }
+    .sidebar-action-btn.logout:hover { color: var(--red); }
+
+    /* ── Main wrapper ── */
+    #main-wrapper {
+      margin-left: var(--sidebar-w);
+      transition: all .3s ease;
+    }
+
+    /* ── Topbar ── */
+    #topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      height: var(--topbar-h);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.5rem;
+      border-bottom: 1px solid;
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+    }
+    body.dark  #topbar { background: rgba(10,14,23,0.80);  border-color: var(--border-dk); }
+    body.light #topbar { background: rgba(241,245,249,0.80); border-color: var(--border-lt); }
+
+    #page-title { font-size: 1.125rem; font-weight: 700; letter-spacing: -0.025em; }
+
+    .topbar-actions { display: flex; align-items: center; gap: 0.75rem; }
+
+    #btn-refresh {
+      font-size: 0.75rem;
+      padding: 0.375rem 0.75rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid;
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      transition: all .15s;
+    }
+    body.dark  #btn-refresh { border-color: rgba(255,255,255,0.10); color: var(--muted-dk); }
+    body.light #btn-refresh { border-color: var(--border-lt); color: #64748b; }
+    #btn-refresh:hover { background: rgba(0,0,0,0.04); }
+    #btn-refresh svg   { width: 0.875rem; height: 0.875rem; }
+
+    .user-avatar {
+      width: 2rem; height: 2rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--teal), var(--cyan));
+      color: #fff;
+    }
+
+    /* ── Content area ── */
+    #content { padding: 1.5rem; }
+
+    /* ════════════════════════════════════════════════════════════════
+       SHARED COMPONENT STYLES
+    ════════════════════════════════════════════════════════════════ */
+
+    /* Cards */
+    .db-card {
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      border: 1px solid;
+    }
+    body.dark  .db-card { background: var(--surface);    border-color: var(--border-dk); }
+    body.light .db-card { background: var(--surface-lt); border-color: var(--border-lt); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+
+    /* Spinner */
+    .spinner {
+      width: 1.75rem; height: 1.75rem;
+      border: 2px solid;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    body.dark  .spinner { border-color: #334155; border-top-color: var(--teal-400); }
+    body.light .spinner { border-color: #e2e8f0; border-top-color: var(--teal); }
+
+    .loader-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6rem 0;
+    }
+
+    /* Stat cards */
+    .stat-grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: repeat(1, minmax(0,1fr));
+    }
+
+    .stat-card {
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      border: 1px solid;
+      transition: transform .2s ease;
+      animation: fade-in .35s ease-out both;
+    }
+    body.dark  .stat-card { background: var(--surface);    border-color: var(--border-dk); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+    body.light .stat-card { background: var(--surface-lt); border-color: var(--border-lt); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .stat-card:hover { transform: scale(1.02); }
+
+    .stat-icon {
+      width: 2.5rem; height: 2.5rem;
+      border-radius: var(--radius-xl);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .stat-icon svg { width: 1.25rem; height: 1.25rem; }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      margin-top: 0.75rem;
+    }
+    body.dark  .stat-value { color: #fff; }
+    body.light .stat-value { color: var(--text-lt); }
+
+    .stat-label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      margin-top: 0.25rem;
+    }
+    body.dark  .stat-label { color: var(--muted-dk); }
+    body.light .stat-label { color: var(--muted-lt); }
+
+    .stat-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
+    }
+    .stat-badge.pos { background: rgba(16,185,129,0.10); color: var(--green); }
+    .stat-badge.neg { background: rgba(239,68,68,0.10);  color: var(--red); }
+
+    /* Banner strips */
+    .banner {
+      border-radius: var(--radius);
+      border: 1px solid;
+      padding: 0.875rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      animation: fade-in .35s ease-out both;
+    }
+    .banner svg { width: 1.25rem; height: 1.25rem; flex-shrink: 0; }
+
+    .banner.teal.dark  { background: rgba(20,184,166,0.05);  border-color: rgba(20,184,166,0.15); }
+    .banner.teal.light { background: #f0fdfa;                 border-color: #ccfbf1; }
+    .banner.teal svg   { color: var(--teal); }
+    .banner.teal.dark  p { color: var(--teal-400); }
+    .banner.teal.light p { color: var(--teal-700); }
+
+    .banner.red.dark  { background: rgba(239,68,68,0.05);  border-color: rgba(239,68,68,0.10); }
+    .banner.red.light { background: #fef2f2;                border-color: #fee2e2; }
+    .banner.red svg    { color: var(--red); }
+    .banner.red.dark  p { color: #fca5a5; }
+    .banner.red.light p { color: #b91c1c; }
+
+    /* Tables */
+    .table-card {
+      border-radius: var(--radius);
+      border: 1px solid;
+      overflow: hidden;
+    }
+    body.dark  .table-card { background: var(--surface);    border-color: var(--border-dk); }
+    body.light .table-card { background: var(--surface-lt); border-color: var(--border-lt); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+
+    .table-scroll { overflow-x: auto; }
+
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+
+    .data-table thead tr {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    body.dark  .data-table thead tr { background: rgba(255,255,255,0.02); }
+    body.light .data-table thead tr { background: #f8fafc; }
+
+    .data-table th {
+      padding: 0.75rem 1.25rem;
+      text-align: left;
+    }
+    body.dark  .data-table th { color: var(--muted-dk); }
+    body.light .data-table th { color: var(--muted-lt); }
+
+    .data-table td { padding: 0.75rem 1.25rem; }
+
+    .data-table tbody tr {
+      transition: background .15s;
+    }
+    body.dark  .data-table tbody tr { border-top: 1px solid var(--border-dk); }
+    body.light .data-table tbody tr { border-top: 1px solid #f1f5f9; }
+    body.dark  .data-table tbody tr:hover { background: rgba(255,255,255,0.02); }
+    body.light .data-table tbody tr:hover { background: rgba(248,250,252,0.50); }
+
+    /* Section headers */
+    .section-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 1rem;
+    }
+    body.dark  .section-title { color: var(--muted-dk); }
+    body.light .section-title { color: var(--muted-lt); }
+
+    /* Page flex containers */
+    .page-col  { display: flex; flex-direction: column; gap: 1.5rem; }
+    .page-col2 { display: flex; flex-direction: column; gap: 1rem; }
+
+    /* Responsive grids injected where needed */
+    .grid-2 { display: grid; grid-template-columns: repeat(1,minmax(0,1fr)); gap: 1rem; }
+    .grid-3 { display: grid; grid-template-columns: repeat(1,minmax(0,1fr)); gap: 1rem; }
+
+    @media(min-width:640px)  { .stat-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+    @media(min-width:1280px) { .stat-grid { grid-template-columns: repeat(4,minmax(0,1fr)); } }
+    @media(min-width:768px)  { .grid-3    { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+    @media(min-width:1280px) { .grid-3    { grid-template-columns: repeat(3,minmax(0,1fr)); } }
+    @media(min-width:1024px) { .grid-2    { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+
+    /* Branch cards */
+    .branch-card {
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      border: 1px solid;
+      transition: transform .2s ease;
+    }
+    body.dark  .branch-card { background: var(--surface);    border-color: var(--border-dk); }
+    body.light .branch-card { background: var(--surface-lt); border-color: var(--border-lt); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .branch-card:hover { transform: scale(1.01); }
+
+    /* Filter buttons */
+    .filter-btn {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.375rem 0.75rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid;
+      transition: all .15s ease;
+    }
+
+    /* Pagination buttons */
+    .page-btn {
+      padding: 0.375rem 0.75rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      font-weight: 500;
+      border: 1px solid;
+      transition: all .15s;
+    }
+    .page-btn:disabled { opacity: 0.30; cursor: not-allowed; }
+    body.dark  .page-btn { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.10); color: #cbd5e1; }
+    body.light .page-btn { background: #fff;                   border-color: var(--border-lt);       color: #475569; }
+
+    /* Alerts page items */
+    .alert-item {
+      border-radius: var(--radius);
+      border: 1px solid;
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      transition: border-color .15s;
+    }
+    body.dark  .alert-item { background: var(--surface);    border-color: var(--border-dk); }
+    body.light .alert-item { background: var(--surface-lt); border-color: var(--border-lt); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    body.dark  .alert-item:hover { border-color: rgba(239,68,68,0.20); }
+    body.light .alert-item:hover { border-color: #fecaca; }
+
+    /* Batch cards (products page) */
+    .batch-card {
+      border-radius: var(--radius);
+      border: 1px solid;
+      overflow: hidden;
+    }
+    body.dark  .batch-card { background: var(--surface);    border-color: var(--border-dk); }
+    body.light .batch-card { background: var(--surface-lt); border-color: var(--border-lt); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+
+    .batch-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid;
+    }
+    body.dark  .batch-header { border-color: var(--border-dk); }
+    body.light .batch-header { border-color: #f1f5f9; }
+
+    /* Risk bar */
+    .risk-bar-bg {
+      width: 3rem; height: 0.375rem;
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+    body.dark  .risk-bar-bg { background: #334155; }
+    body.light .risk-bar-bg { background: #e2e8f0; }
+
+    .risk-bar-fill {
+      height: 100%;
+      border-radius: 9999px;
+      background: var(--red-500);
+    }
+
+    /* Chart containers */
+    .chart-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 0.5rem;
+      height: 12rem;
+      margin-top: 0.5rem;
+    }
+
+    .chart-bar-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .chart-bar-val {
+      font-size: 9px;
+      font-weight: 700;
+    }
+    body.dark  .chart-bar-val { color: var(--muted-dk); }
+    body.light .chart-bar-val { color: #64748b; }
+
+    .chart-bar-rect {
+      width: 100%;
+      border-radius: 0.375rem 0.375rem 0 0;
+      transition: height .6s cubic-bezier(.22,1,.36,1);
+    }
+
+    .chart-bar-lbl {
+      font-size: 9px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 100%;
+    }
+    body.dark  .chart-bar-lbl { color: var(--dim-dk); }
+    body.light .chart-bar-lbl { color: var(--muted-lt); }
   </style>
 </head>
-<body class="min-h-screen transition-colors duration-300" id="body">
+<body class="dark" id="body">
 
-<!-- ════════════════════════════════════════════════════════
-     LOGIN SCREEN
-     ════════════════════════════════════════════════════════ -->
-<div id="login-screen" class="min-h-screen flex items-center justify-center px-4">
-  <div id="login-card" class="w-full max-w-sm rounded-2xl p-8 shadow-2xl border">
-    <div class="flex flex-col items-center mb-8">
-      <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-black text-xl mb-4
-                  bg-gradient-to-br from-teal-500 to-cyan-600 shadow-lg shadow-teal-500/25">P</div>
-      <h1 id="login-title" class="text-xl font-bold">Smart POS</h1>
-      <p id="login-sub" class="text-sm mt-1">Admin Dashboard Login</p>
+<!-- ════════════════════════════════════ LOGIN ════════════════════════════════════ -->
+<div id="login-screen">
+  <div id="login-card">
+    <div class="login-header">
+      <div class="login-logo">P</div>
+      <h1 id="login-title">Smart POS</h1>
+      <p id="login-sub">Admin Dashboard Login</p>
     </div>
-    <div id="login-error" class="hidden bg-red-500/10 border border-red-500/20 text-red-400
-                                  text-xs rounded-lg px-4 py-2.5 mb-4"></div>
-    <div class="flex flex-col gap-4">
+    <div id="login-error" style="display:none"></div>
+    <div class="login-fields">
       <div>
-        <label id="lbl-user" class="text-xs font-semibold uppercase tracking-wider mb-1.5 block">Username</label>
-        <input id="inp-user" value="admin"
-               class="w-full rounded-lg px-4 py-2.5 text-sm outline-none border transition-colors" />
+        <label class="field-label" for="inp-user">Username</label>
+        <input id="inp-user" class="field-input" value="admin" autocomplete="username" />
       </div>
       <div>
-        <label id="lbl-pass" class="text-xs font-semibold uppercase tracking-wider mb-1.5 block">Password</label>
-        <input id="inp-pass" type="password" value="admin123"
-               class="w-full rounded-lg px-4 py-2.5 text-sm outline-none border transition-colors"
+        <label class="field-label" for="inp-pass">Password</label>
+        <input id="inp-pass" class="field-input" type="password" value="admin123"
+               autocomplete="current-password"
                onkeydown="if(event.key==='Enter')doLogin()" />
       </div>
-      <button onclick="doLogin()"
-              class="w-full bg-gradient-to-r from-teal-500 to-cyan-600 text-white font-semibold
-                     text-sm rounded-lg px-4 py-2.5 mt-2 hover:opacity-90 transition-opacity
-                     shadow-lg shadow-teal-500/20">
-        Sign In
-      </button>
-      <p id="login-hint" class="text-xs text-center mt-2">Default: admin / admin123</p>
+      <button class="btn-login" onclick="doLogin()">Sign In</button>
+      <p id="login-hint">Default: admin / admin123</p>
     </div>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════════
-     DASHBOARD  (hidden until logged in)
-     ════════════════════════════════════════════════════════ -->
-<div id="dashboard" class="hidden">
+<!-- ════════════════════════════════════ DASHBOARD ════════════════════════════════ -->
+<div id="dashboard">
 
   <!-- Sidebar -->
-  <aside id="sidebar" class="fixed top-0 left-0 h-screen w-60 flex flex-col border-r z-30 transition-all duration-300">
-    <div id="sidebar-header" class="flex items-center gap-3 px-4 h-16 border-b shrink-0">
-      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center
-                  justify-center text-white font-black text-sm shrink-0 shadow-lg shadow-teal-500/20">P</div>
-      <span id="sidebar-brand" class="font-bold text-sm tracking-tight">Smart POS</span>
+  <aside id="sidebar">
+    <div id="sidebar-header">
+      <div class="sidebar-logo">P</div>
+      <span id="sidebar-brand">Smart POS</span>
     </div>
-
-    <nav id="sidebar-nav" class="flex-1 py-3 px-2 overflow-y-auto"></nav>
-
-    <div id="sidebar-bottom" class="border-t px-2 py-3 flex flex-col gap-1 shrink-0">
-      <!-- Live indicator -->
-      <div id="live-indicator" class="flex items-center px-3 py-2 text-xs">
-        <span class="live-dot font-medium"></span>
+    <nav id="sidebar-nav"></nav>
+    <div id="sidebar-bottom">
+      <div id="live-indicator">
+        <span class="live-dot"></span>
         <span id="last-refresh-label">Live</span>
       </div>
-      <button onclick="toggleDark()" id="btn-theme"
-              class="w-full flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-          <path id="theme-icon-path" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+      <button class="sidebar-action-btn" onclick="toggleDark()" id="btn-theme">
+        <svg fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+          <path id="theme-icon-path"
+            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
         </svg>
         <span id="theme-label">Light mode</span>
       </button>
-      <button onclick="doLogout()"
-              class="w-full flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors hover:text-red-400">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+      <button class="sidebar-action-btn logout" onclick="doLogout()">
+        <svg fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
           <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
         </svg>
         <span>Logout</span>
@@ -111,63 +760,54 @@
   </aside>
 
   <!-- Main -->
-  <div id="main-wrapper" class="ml-60 transition-all duration-300">
-    <header id="topbar"
-            class="sticky top-0 z-20 border-b backdrop-blur-xl h-16 flex items-center justify-between px-6">
-      <h2 id="page-title" class="text-lg font-bold tracking-tight">Dashboard Overview</h2>
-      <div class="flex items-center gap-3">
-        <button onclick="loadAllData()" id="btn-refresh"
-                class="text-xs px-3 py-1.5 rounded-lg border transition-colors flex items-center gap-1.5"
-                title="Refresh now">
-          <svg id="refresh-icon" class="w-3.5 h-3.5" fill="none" stroke="currentColor"
-               stroke-width="2" viewBox="0 0 24 24">
-            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0
-                     0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+  <div id="main-wrapper">
+    <header id="topbar">
+      <h2 id="page-title">Dashboard Overview</h2>
+      <div class="topbar-actions">
+        <button id="btn-refresh" onclick="loadAllData()">
+          <svg id="refresh-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
           </svg>
           Refresh
         </button>
-        <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold
-                    bg-gradient-to-br from-teal-500 to-cyan-600 text-white">A</div>
+        <div class="user-avatar">A</div>
       </div>
     </header>
-    <main id="content" class="p-6"></main>
+    <main id="content"></main>
   </div>
 </div>
 
 <script>
 /* ════════════════════════════════════════════════════════════════════
-   CONSTANTS & STATE
+   CONFIG & STATE
    ════════════════════════════════════════════════════════════════════ */
 const API = "http://localhost:8000/api";
-
 let TOKEN      = null;
 let DARK       = true;
 let PAGE       = "overview";
-let DATA       = {};          // cached responses keyed by page name
+let DATA       = {};
 let REFRESH_IV = null;
-let LAST_TXN_COUNT = 0;       // used to detect new cashier submissions
+let TXN_PAGE   = 1;
+let TXN_FILTER = "all";
+let LAST_REFRESH_MS = Date.now();
+let CLOCK_IV   = null;
 
-// How often the dashboard auto-refreshes (ms).
-// 10 s keeps cashier activity visible almost immediately.
-const REFRESH_MS = 10_000;
+/* ── Formatters ── */
+const usd  = n => new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",minimumFractionDigits:0,maximumFractionDigits:0}).format(n);
+const usd2 = n => new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(n);
+const pct  = n => (n>0?"+":"")+n.toFixed(1)+"%";
+const sDt  = iso => new Date(iso).toLocaleDateString("en-US",{month:"short",day:"numeric"});
+const sTm  = iso => new Date(iso).toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
 
-/* ── Formatters ─────────────────────────────────────────────────── */
-const usd      = n => new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",
-                       minimumFractionDigits:0,maximumFractionDigits:0}).format(n);
-const usd2     = n => new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(n);
-const pct      = n => (n>0?"+":"") + n.toFixed(1) + "%";
-const shortDate= iso => new Date(iso).toLocaleDateString("en-US",{month:"short",day:"numeric"});
-const shortTime= iso => new Date(iso).toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
-
-/* ── Nav items ──────────────────────────────────────────────────── */
+/* ── Nav items ── */
 const NAV_ITEMS = [
-  { id:"overview",  label:"Overview",          icon:"M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1" },
-  { id:"branches",  label:"Branches",          icon:"M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5" },
-  { id:"txns",      label:"Transactions",      icon:"M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" },
-  { id:"fraud",     label:"Fraud Detection",   icon:"M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" },
-  { id:"alerts",    label:"Alerts",            icon:"M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" },
-  { id:"charts",    label:"Analytics",         icon:"M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
-  { id:"products",  label:"Cashier Products",  icon:"M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" },
+  { id:"overview",  label:"Overview",         icon:"M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1" },
+  { id:"branches",  label:"Branches",         icon:"M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5" },
+  { id:"txns",      label:"Transactions",     icon:"M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" },
+  { id:"fraud",     label:"Fraud Detection",  icon:"M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" },
+  { id:"alerts",    label:"Alerts",           icon:"M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" },
+  { id:"charts",    label:"Analytics",        icon:"M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
+  { id:"products",  label:"Cashier Products", icon:"M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" },
 ];
 
 const PAGE_TITLES = {
@@ -177,99 +817,51 @@ const PAGE_TITLES = {
   products:"Cashier Products",
 };
 
+const D = () => DARK; // shorthand
 
 /* ════════════════════════════════════════════════════════════════════
    API HELPER
-   All authenticated requests go through here.
-   On 401 the user is automatically logged out.
    ════════════════════════════════════════════════════════════════════ */
-async function apiFetch(path, opts = {}) {
+async function apiFetch(path, opts={}) {
   const res = await fetch(API + path, {
     ...opts,
     headers: {
-      "Content-Type": "application/json",
-      ...(TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {}),
+      "Content-Type":"application/json",
+      ...(TOKEN?{Authorization:`Bearer ${TOKEN}`}:{}),
       ...opts.headers,
     },
   });
-  if (res.status === 401) { doLogout(); throw new Error("UNAUTHORIZED"); }
+  if (res.status===401) { doLogout(); throw new Error("UNAUTHORIZED"); }
   if (!res.ok) throw new Error("API " + res.status);
   return res.json();
 }
-
 
 /* ════════════════════════════════════════════════════════════════════
    THEME
    ════════════════════════════════════════════════════════════════════ */
 function applyTheme() {
   const b = document.getElementById("body");
-  b.className = DARK
-    ? "min-h-screen bg-[#0a0e17] text-slate-100 transition-colors duration-300"
-    : "min-h-screen bg-slate-100 text-slate-900 transition-colors duration-300";
+  b.className = DARK ? "dark" : "light";
 
-  // Login
-  const lc = document.getElementById("login-card");
-  if (lc) lc.className = `w-full max-w-sm rounded-2xl p-8 shadow-2xl border
-    ${DARK?"bg-[#111827] border-white/5":"bg-white border-slate-200"}`;
-  setTxt("login-title", `text-xl font-bold ${DARK?"text-white":"text-slate-900"}`);
-  setTxt("login-sub",   `text-sm mt-1 ${DARK?"text-slate-500":"text-slate-400"}`);
-  setTxt("login-hint",  `text-xs text-center mt-2 ${DARK?"text-slate-600":"text-slate-400"}`);
-  document.querySelectorAll("#login-screen label").forEach(l =>
-    l.className=`text-xs font-semibold uppercase tracking-wider mb-1.5 block
-    ${DARK?"text-slate-400":"text-slate-500"}`);
-  document.querySelectorAll("#login-screen input").forEach(i =>
-    i.className=`w-full rounded-lg px-4 py-2.5 text-sm outline-none border transition-colors
-    ${DARK?"bg-white/5 border-white/10 text-white focus:border-teal-500":"bg-slate-50 border-slate-200 text-slate-900 focus:border-teal-500"}`);
-
-  // Sidebar
-  const sb = document.getElementById("sidebar");
-  if (sb) sb.className=`fixed top-0 left-0 h-screen w-60 flex flex-col border-r z-30
-    transition-all duration-300 ${DARK?"bg-[#0d1117] border-white/5":"bg-white border-slate-200"}`;
-  const sh = document.getElementById("sidebar-header");
-  if (sh) sh.className=`flex items-center gap-3 px-4 h-16 border-b shrink-0
-    ${DARK?"border-white/5":"border-slate-100"}`;
-  const sbn = document.getElementById("sidebar-brand");
-  if (sbn) sbn.className=`font-bold text-sm tracking-tight ${DARK?"text-white":"text-slate-900"}`;
-  const sbb = document.getElementById("sidebar-bottom");
-  if (sbb) sbb.className=`border-t px-2 py-3 flex flex-col gap-1 shrink-0
-    ${DARK?"border-white/5":"border-slate-100"}`;
-  const li = document.getElementById("live-indicator");
-  if (li) li.className=`flex items-center px-3 py-2 text-xs
-    ${DARK?"text-emerald-500":"text-emerald-600"}`;
-  document.querySelectorAll("#sidebar-bottom button").forEach(btn =>
-    btn.className=`w-full flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors
-    ${DARK?"text-slate-500 hover:text-slate-300 hover:bg-white/5":"text-slate-400 hover:text-slate-600 hover:bg-slate-50"}`);
-  setTxt("theme-label", DARK?"Light mode":"Dark mode");
-  document.getElementById("theme-icon-path")?.setAttribute("d",
-    DARK ? "M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-         : "M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z");
-
-  // Topbar
-  const tb = document.getElementById("topbar");
-  if (tb) tb.className=`sticky top-0 z-20 border-b backdrop-blur-xl h-16 flex items-center
-    justify-between px-6 ${DARK?"bg-[#0a0e17]/80 border-white/5":"bg-slate-100/80 border-slate-200"}`;
-  const br = document.getElementById("btn-refresh");
-  if (br) br.className=`text-xs px-3 py-1.5 rounded-lg border transition-colors flex items-center gap-1.5
-    ${DARK?"border-white/10 text-slate-400 hover:bg-white/5":"border-slate-200 text-slate-500 hover:bg-slate-200"}`;
+  const tl = document.getElementById("theme-label");
+  if (tl) tl.textContent = DARK ? "Light mode" : "Dark mode";
+  const tp = document.getElementById("theme-icon-path");
+  if (tp) tp.setAttribute("d", DARK
+    ? "M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+    : "M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z");
 
   renderNav();
   renderPage();
 }
 
-function setTxt(id, cls) {
-  const el = document.getElementById(id);
-  if (el) el.className = cls;
-}
-
 function toggleDark() { DARK = !DARK; applyTheme(); }
-
 
 /* ════════════════════════════════════════════════════════════════════
    AUTH
    ════════════════════════════════════════════════════════════════════ */
 async function doLogin() {
   const errEl = document.getElementById("login-error");
-  errEl.classList.add("hidden");
+  errEl.style.display = "none";
   try {
     const data = await apiFetch("/auth/login", {
       method: "POST",
@@ -279,16 +871,15 @@ async function doLogin() {
       }),
     });
     TOKEN = data.token;
-    document.getElementById("login-screen").classList.add("hidden");
-    document.getElementById("dashboard").classList.remove("hidden");
+    document.getElementById("login-screen").style.display = "none";
+    document.getElementById("dashboard").style.display = "block";
     applyTheme();
     await loadAllData();
-    // Auto-refresh every REFRESH_MS so cashier submissions appear quickly
-    REFRESH_IV = setInterval(loadAllData, REFRESH_MS);
-    startRefreshClock();
-  } catch (e) {
+    REFRESH_IV = setInterval(loadAllData, 10000);
+    startClock();
+  } catch {
     errEl.textContent = "Invalid credentials or server unreachable";
-    errEl.classList.remove("hidden");
+    errEl.style.display = "block";
   }
 }
 
@@ -296,36 +887,27 @@ function doLogout() {
   TOKEN = null; DATA = {};
   clearInterval(REFRESH_IV);
   clearInterval(CLOCK_IV);
-  document.getElementById("login-screen").classList.remove("hidden");
-  document.getElementById("dashboard").classList.add("hidden");
-  applyTheme();
+  document.getElementById("login-screen").style.display = "flex";
+  document.getElementById("dashboard").style.display = "none";
 }
 
-
 /* ════════════════════════════════════════════════════════════════════
-   LIVE CLOCK  — "Updated Xs ago" shown in sidebar
+   LIVE CLOCK
    ════════════════════════════════════════════════════════════════════ */
-let LAST_REFRESH_MS = Date.now();
-let CLOCK_IV = null;
-
-function startRefreshClock() {
+function startClock() {
   clearInterval(CLOCK_IV);
   CLOCK_IV = setInterval(() => {
-    const sec = Math.round((Date.now() - LAST_REFRESH_MS) / 1000);
+    const sec = Math.round((Date.now() - LAST_REFRESH_MS)/1000);
     const lbl = document.getElementById("last-refresh-label");
     if (lbl) lbl.textContent = sec < 5 ? "Live" : `Updated ${sec}s ago`;
   }, 1000);
 }
 
-
 /* ════════════════════════════════════════════════════════════════════
    DATA LOADING
-   All pages share a single refresh cycle.
-   The Transactions page always gets fresh data so new cashier rows
-   appear with the green flash animation.
    ════════════════════════════════════════════════════════════════════ */
 async function loadAllData() {
-  animateRefreshIcon(true);
+  spinRefresh(true);
   try {
     const [sales, fraud, branches, lineChart, barChart] = await Promise.all([
       apiFetch("/sales"),
@@ -336,44 +918,35 @@ async function loadAllData() {
     ]);
     DATA = { ...DATA, sales, fraud, branches, lineChart, barChart };
     LAST_REFRESH_MS = Date.now();
-
-    // Reload transactions if we're on that page (to show new cashier rows)
-    if (PAGE === "txns") {
-      await loadTransactions(TXN_PAGE);
-    } else {
-      renderPage();
-    }
-  } catch (e) {
-    console.error("Data load failed:", e);
-  } finally {
-    animateRefreshIcon(false);
-  }
+    if (PAGE === "txns")          await loadTxns(TXN_PAGE);
+    else if (PAGE === "products") await loadProducts();
+    else renderPage();
+  } catch(e) { console.error("Load error:", e); }
+  finally    { spinRefresh(false); }
 }
 
-let TXN_PAGE = 1;
-async function loadTransactions(p = 1) {
+async function loadTxns(p=1) {
   TXN_PAGE = p;
   try {
     const prev = DATA.txns?.total ?? 0;
-    DATA.txns = await apiFetch(`/transactions?page=${TXN_PAGE}&per_page=20`);
-    // Track if new transactions arrived (for flash animation)
+    const path = TXN_FILTER==="all"
+      ? `/transactions?page=${p}&per_page=20`
+      : `/transactions?page=${p}&per_page=20&type=${TXN_FILTER}`;
+    DATA.txns = await apiFetch(path);
     DATA.txns._newCount = DATA.txns.total - prev;
     renderPage();
-  } catch (e) { console.error(e); }
+  } catch(e) { console.error(e); }
 }
 
 async function loadProducts() {
-  try {
-    DATA.products = await apiFetch("/products");
-    renderPage();
-  } catch (e) { console.error(e); }
+  try { DATA.products = await apiFetch("/products"); renderPage(); }
+  catch(e) { console.error(e); }
 }
 
-function animateRefreshIcon(on) {
+function spinRefresh(on) {
   const icon = document.getElementById("refresh-icon");
-  if (icon) icon.className = on ? "w-3.5 h-3.5 spin" : "w-3.5 h-3.5";
+  if (icon) icon.style.animation = on ? "spin .7s linear infinite" : "";
 }
-
 
 /* ════════════════════════════════════════════════════════════════════
    NAVIGATION
@@ -381,38 +954,33 @@ function animateRefreshIcon(on) {
 function renderNav() {
   const nav = document.getElementById("sidebar-nav");
   if (!nav) return;
-  const fraudBadge = DATA.sales?.total_flagged > 0
-    ? `<span class="ml-auto text-[10px] font-bold bg-red-500/20 text-red-400 rounded-full px-2 py-0.5">
-        ${DATA.sales.total_flagged}</span>` : "";
+  const dk = DARK;
+  const fraudCount = DATA.sales?.total_flagged || 0;
 
   nav.innerHTML = NAV_ITEMS.map(n => {
     const active = n.id === PAGE;
-    const cls = active
-      ? DARK ? "bg-teal-500/10 text-teal-400" : "bg-teal-50 text-teal-700"
-      : DARK ? "text-slate-400 hover:text-slate-200 hover:bg-white/5"
-             : "text-slate-500 hover:text-slate-800 hover:bg-slate-50";
-    const badge = n.id === "fraud" ? fraudBadge : "";
-    return `<button onclick="navigate('${n.id}')"
-              class="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm
-                     font-medium transition-all mb-0.5 ${cls}">
-      <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor"
-           stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+    const badge  = n.id==="fraud" && fraudCount>0
+      ? `<span class="nav-badge">${fraudCount}</span>` : "";
+    return `<button class="nav-btn ${active?"active":"inactive"} ${dk?"dark":"light"}"
+      onclick="navigate('${n.id}')">
+      <svg fill="none" stroke="currentColor" stroke-width="1.75"
+           stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
         <path d="${n.icon}"/>
       </svg>
-      <span class="truncate">${n.label}</span>${badge}
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${n.label}</span>
+      ${badge}
     </button>`;
   }).join("");
 }
 
 function navigate(id) {
   PAGE = id;
-  document.getElementById("page-title").textContent = PAGE_TITLES[id];
+  document.getElementById("page-title").textContent = PAGE_TITLES[id] || id;
   renderNav();
-  if (id === "txns")     loadTransactions(1);
-  else if (id === "products") loadProducts();
+  if (id==="txns")          loadTxns(1);
+  else if (id==="products") loadProducts();
   else renderPage();
 }
-
 
 /* ════════════════════════════════════════════════════════════════════
    RENDER ROUTER
@@ -420,7 +988,7 @@ function navigate(id) {
 function renderPage() {
   const el = document.getElementById("content");
   if (!el) return;
-  const renderers = {
+  const map = {
     overview: renderOverview,
     branches: renderBranches,
     txns:     renderTxns,
@@ -429,597 +997,67 @@ function renderPage() {
     charts:   renderCharts,
     products: renderProducts,
   };
-  el.innerHTML = (renderers[PAGE] ?? (() => ""))();
+  el.innerHTML = (map[PAGE] ?? (()=>""))();
 }
 
-
 /* ════════════════════════════════════════════════════════════════════
-   SHARED UI HELPERS
+   UI BUILDING BLOCKS
    ════════════════════════════════════════════════════════════════════ */
-function card(cls2 = "", inner = "") {
-  return `<div class="rounded-2xl border p-5 ${DARK
-    ? "bg-[#111827] border-white/5"
-    : "bg-white border-slate-200 shadow-sm"} ${cls2}">${inner}</div>`;
+const METHOD_STYLES = {
+  credit_card: { l:"Credit",  s:"background:rgba(59,130,246,0.10);color:#60a5fa" },
+  debit_card:  { l:"Debit",   s:"background:rgba(139,92,246,0.10);color:#a78bfa" },
+  cash:        { l:"Cash",    s:"background:rgba(16,185,129,0.10);color:#10b981" },
+  mobile_pay:  { l:"Mobile",  s:"background:rgba(245,158,11,0.10);color:#fbbf24" },
+  contactless: { l:"Tap",     s:"background:rgba(6,182,212,0.10);color:#22d3ee" },
+  cashier:     { l:"Cashier", s:"background:rgba(20,184,166,0.10);color:#2dd4bf" },
+};
+
+function methodBadge(m) {
+  const b = METHOD_STYLES[m] || { l:m, s:"background:rgba(100,116,139,0.10);color:#94a3b8" };
+  return `<span style="font-size:10px;font-weight:700;text-transform:uppercase;
+    padding:0.125rem 0.5rem;border-radius:9999px;${b.s}">${b.l}</span>`;
 }
 
 function loader() {
-  return `<div class="flex items-center justify-center py-24">
-    <div class="w-7 h-7 border-2 rounded-full spin
-      ${DARK?"border-slate-700 border-t-teal-400":"border-slate-200 border-t-teal-500"}"></div>
-  </div>`;
+  return `<div class="loader-wrap"><div class="spinner"></div></div>`;
 }
 
 function statCard(label, value, change, color, delay) {
-  const c = color || "teal";
-  const bg   = DARK ? `bg-${c}-500/10` : `bg-${c}-50`;
-  const txt  = `text-${c}-500`;
-  const badge = change !== null
-    ? `<span class="text-xs font-bold px-2 py-0.5 rounded-full
-        ${change >= 0
-          ? "bg-emerald-500/10 text-emerald-500"
-          : "bg-red-500/10 text-red-400"}">${pct(change)}</span>`
-    : "";
-  return `<div class="rounded-2xl p-5 border transition-all hover:scale-[1.02] duration-200
-    fade-in fade-in-${delay} ${DARK?"bg-[#111827] border-white/5 shadow-xl":"bg-white border-slate-200 shadow-sm"}">
-    <div class="flex items-start justify-between mb-3">
-      <div class="w-10 h-10 rounded-xl flex items-center justify-center ${bg} ${txt}">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+  const palettes = {
+    teal:   { bg:"rgba(20,184,166,0.10)",   col:"#14b8a6" },
+    blue:   { bg:"rgba(59,130,246,0.10)",   col:"#3b82f6" },
+    amber:  { bg:"rgba(245,158,11,0.10)",   col:"#f59e0b" },
+    violet: { bg:"rgba(139,92,246,0.10)",   col:"#8b5cf6" },
+  };
+  const p = palettes[color] || palettes.teal;
+  const badge = change!==null
+    ? `<span class="stat-badge ${change>=0?"pos":"neg"}">${pct(change)}</span>` : "";
+  return `<div class="stat-card" style="animation-delay:${delay*50}ms">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:0.75rem">
+      <div class="stat-icon" style="background:${p.bg};color:${p.col}">
+        <svg fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
           <circle cx="12" cy="12" r="3"/>
         </svg>
       </div>${badge}
     </div>
-    <p class="text-2xl font-extrabold tracking-tight ${DARK?"text-white":"text-slate-900"}">${value}</p>
-    <p class="text-xs font-medium mt-1 ${DARK?"text-slate-500":"text-slate-400"}">${label}</p>
+    <p class="stat-value">${value}</p>
+    <p class="stat-label">${label}</p>
   </div>`;
 }
 
-// Payment method badge styles (includes "cashier" as a new type)
-const METHOD_STYLES = {
-  credit_card: { l:"Credit",    c:"bg-blue-500/10 text-blue-400" },
-  debit_card:  { l:"Debit",     c:"bg-violet-500/10 text-violet-400" },
-  cash:        { l:"Cash",      c:"bg-emerald-500/10 text-emerald-500" },
-  mobile_pay:  { l:"Mobile",    c:"bg-amber-500/10 text-amber-400" },
-  contactless: { l:"Tap",       c:"bg-cyan-500/10 text-cyan-400" },
-  cashier:     { l:"Cashier",   c:"bg-teal-500/10 text-teal-400" },   // ← new
-};
-
-
-/* ════════════════════════════════════════════════════════════════════
-   OVERVIEW PAGE
-   Source: GET /api/sales  +  GET /api/charts/*
-   Shows: daily/weekly/monthly totals, cashier activity today,
-          fraud count, charts preview, recent fraud mini-list.
-   ════════════════════════════════════════════════════════════════════ */
-function renderOverview() {
-  if (!DATA.sales) return loader();
-  const s = DATA.sales;
-
-  let html = `<div class="flex flex-col gap-6">`;
-
-  // ── Stat cards ────────────────────────────────────────────────────
-  html += `<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-    ${statCard("Daily Sales",          usd(s.daily.total),          s.daily.change_pct,  "teal",   1)}
-    ${statCard("Weekly Sales",         usd(s.weekly.total),         s.weekly.change_pct, "blue",   2)}
-    ${statCard("Total Transactions",   s.total_transactions,        null,                "amber",  3)}
-    ${statCard("Active Branches",      s.active_branches,           null,                "violet", 4)}
-  </div>`;
-
-  // ── Cashier activity banner (only when cashier_today > 0) ─────────
-  if (s.cashier_today > 0) {
-    html += `<div class="rounded-2xl border px-5 py-3.5 flex items-center gap-3 fade-in
-      ${DARK?"bg-teal-500/5 border-teal-500/15":"bg-teal-50 border-teal-100"}">
-      <svg class="w-5 h-5 shrink-0 text-teal-500" fill="none" stroke="currentColor"
-           stroke-width="1.75" viewBox="0 0 24 24">
-        <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-      </svg>
-      <p class="text-sm ${DARK?"text-teal-300":"text-teal-700"}">
-        <span class="font-bold">${s.cashier_today} cashier transaction${s.cashier_today!==1?"s":""}</span>
-        submitted today and reflected across all pages.
-      </p>
-    </div>`;
-  }
-
-  // ── Fraud summary banner ──────────────────────────────────────────
-  if (s.total_flagged > 0) {
-    html += `<div class="rounded-2xl border px-5 py-3.5 flex items-center gap-3 fade-in
-      ${DARK?"bg-red-500/5 border-red-500/10":"bg-red-50 border-red-100"}">
-      <svg class="w-5 h-5 shrink-0 ${DARK?"text-red-400":"text-red-500"}" fill="none"
-           stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-        <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732
-                 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-      </svg>
-      <p class="text-sm ${DARK?"text-red-300":"text-red-700"}">
-        <span class="font-bold">${s.total_flagged} suspicious transaction${s.total_flagged!==1?"s":""}</span>
-        flagged by fraud detection.
-        <button onclick="navigate('fraud')" class="underline ml-1 font-semibold">View →</button>
-      </p>
-    </div>`;
-  }
-
-  // ── Charts row ────────────────────────────────────────────────────
-  html += `<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">`;
-  html += card("fade-in fade-in-2",
-    `<h3 class="text-xs font-bold uppercase tracking-wider mb-4
-       ${DARK?"text-slate-500":"text-slate-400"}">Sales — Last 14 Days</h3>
-     ${DATA.lineChart ? lineChart(DATA.lineChart.labels, DATA.lineChart.values) : loader()}`);
-  html += card("fade-in fade-in-3",
-    `<h3 class="text-xs font-bold uppercase tracking-wider mb-4
-       ${DARK?"text-slate-500":"text-slate-400"}">Revenue by Branch</h3>
-     ${DATA.barChart ? barChart(DATA.barChart.branches, "name", "sales", "bg-teal-500") : loader()}`);
-  html += `</div>`;
-
-  html += `</div>`;
-  return html;
-}
-
-
-/* ════════════════════════════════════════════════════════════════════
-   BRANCHES PAGE
-   Source: GET /api/branches
-   Shows: per-branch card with sales, transaction count, cashier count,
-          fraud flag count.  Cashier count is new data added in main.py.
-   ════════════════════════════════════════════════════════════════════ */
-function renderBranches() {
-  if (!DATA.branches) return loader();
-  return `<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-    ${DATA.branches.branches.map((b, i) => `
-    <div class="rounded-2xl border p-5 transition-all hover:scale-[1.01] duration-200
-      fade-in fade-in-${Math.min(i+1,4)}
-      ${DARK?"bg-[#111827] border-white/5":"bg-white border-slate-200 shadow-sm"}">
-      <div class="flex items-center justify-between mb-4">
-        <div>
-          <h3 class="font-bold text-sm ${DARK?"text-white":"text-slate-900"}">${b.name}</h3>
-          <p class="text-xs mt-0.5 ${DARK?"text-slate-500":"text-slate-400"}">${b.city} · ${b.id}</p>
-        </div>
-        <span class="text-[10px] font-bold uppercase px-2.5 py-1 rounded-full
-          ${b.status==="active"
-            ?"bg-emerald-500/10 text-emerald-500"
-            :"bg-slate-500/10 text-slate-400"}">${b.status}</span>
-      </div>
-      <div class="grid grid-cols-4 gap-2">
-        <div class="text-center">
-          <p class="text-base font-extrabold ${DARK?"text-white":"text-slate-900"}">${usd(b.total_sales)}</p>
-          <p class="text-[10px] ${DARK?"text-slate-500":"text-slate-400"}">Sales</p>
-        </div>
-        <div class="text-center">
-          <p class="text-base font-extrabold ${DARK?"text-white":"text-slate-900"}">${b.transaction_count}</p>
-          <p class="text-[10px] ${DARK?"text-slate-500":"text-slate-400"}">Txns</p>
-        </div>
-        <div class="text-center">
-          <p class="text-base font-extrabold ${b.cashier_count>0?"text-teal-400":DARK?"text-white":"text-slate-900"}">
-            ${b.cashier_count}</p>
-          <p class="text-[10px] ${DARK?"text-slate-500":"text-slate-400"}">Cashier</p>
-        </div>
-        <div class="text-center">
-          <p class="text-base font-extrabold ${b.flagged_count>0?"text-red-400":DARK?"text-white":"text-slate-900"}">
-            ${b.flagged_count}</p>
-          <p class="text-[10px] ${DARK?"text-slate-500":"text-slate-400"}">Flagged</p>
-        </div>
-      </div>
-    </div>`).join("")}
-  </div>`;
-}
-
-
-/* ════════════════════════════════════════════════════════════════════
-   TRANSACTIONS PAGE
-   Source: GET /api/transactions  (paginated, refreshed on every cycle)
-   Shows: all transactions — seeded POS rows AND live cashier rows.
-          Cashier rows have a teal "Cashier" payment badge and show the
-          product name.  New rows flash green when they arrive.
-   ════════════════════════════════════════════════════════════════════ */
-function renderTxns() {
-  if (!DATA.txns) { loadTransactions(1); return loader(); }
-  const d = DATA.txns;
-
-  let html = `<div class="flex flex-col gap-4">`;
-
-  // Filter buttons
-  html += `<div class="flex gap-2 flex-wrap">
-    ${["all","cashier","pos"].map(f => {
-      const label = f === "all" ? "All" : f === "cashier" ? "🛒 Cashier Only" : "POS Only";
-      const active = (TXN_TYPE_FILTER === f);
-      return `<button onclick="setTxnFilter('${f}')"
-        class="text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors
-        ${active
-          ? DARK?"bg-teal-500/15 border-teal-500/30 text-teal-400"
-                :"bg-teal-50 border-teal-200 text-teal-700"
-          : DARK?"border-white/10 text-slate-400 hover:bg-white/5"
-                :"border-slate-200 text-slate-500 hover:bg-slate-50"}">${label}</button>`;
-    }).join("")}
-    <span class="ml-auto text-xs ${DARK?"text-slate-500":"text-slate-400"} self-center">
-      ${d.total} transactions
-    </span>
-  </div>`;
-
-  html += `<div class="rounded-2xl border overflow-hidden
-    ${DARK?"bg-[#111827] border-white/5":"bg-white border-slate-200 shadow-sm"}">
-    <div class="overflow-x-auto"><table class="w-full text-sm">
-      <thead><tr class="${DARK?"bg-white/[0.02]":"bg-slate-50"}">
-        ${["ID","Branch","Product","Amount","Time","Method","Status"].map(h =>
-          `<th class="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-left
-            ${DARK?"text-slate-500":"text-slate-400"}">${h}</th>`).join("")}
-      </tr></thead>
-      <tbody>`;
-
-  d.items.forEach((t, i) => {
-    const m = METHOD_STYLES[t.payment_method] ?? { l: t.payment_method, c: "bg-slate-500/10 text-slate-400" };
-    const isCashier   = t.type === "cashier";
-    const isNew       = i < (d._newCount ?? 0);
-    const suspicious  = t.suspicious;
-    const rowCls = suspicious
-      ? DARK ? "bg-red-500/[0.04] hover:bg-red-500/[0.07]" : "bg-red-50/50 hover:bg-red-50"
-      : isCashier
-      ? DARK ? "bg-teal-500/[0.03] hover:bg-teal-500/[0.06]" : "bg-teal-50/30 hover:bg-teal-50/60"
-      : DARK ? "hover:bg-white/[0.02]" : "hover:bg-slate-50/50";
-
-    html += `<tr class="border-t transition-colors ${isNew ? "new-row" : ""}
-      ${DARK?"border-white/5":"border-slate-100"} ${rowCls}">
-      <td class="px-4 py-3 font-mono text-xs ${DARK?"text-slate-300":"text-slate-700"}">${t.id}</td>
-      <td class="px-4 py-3 text-xs ${DARK?"text-slate-400":"text-slate-500"}">${t.branch_name}</td>
-      <td class="px-4 py-3 text-xs ${DARK?"text-slate-400":"text-slate-500"}">
-        ${t.product_name
-          ? `<span class="font-medium ${DARK?"text-slate-200":"text-slate-700"}">${t.product_name}</span>`
-          : `<span class="${DARK?"text-slate-700":"text-slate-300"}">—</span>`}
-      </td>
-      <td class="px-4 py-3 font-mono font-bold text-xs
-        ${suspicious ? "text-red-400" : isCashier ? "text-teal-400" : "text-teal-500"}">
-        ${usd2(t.amount)}
-      </td>
-      <td class="px-4 py-3 text-xs ${DARK?"text-slate-500":"text-slate-400"}">
-        ${shortDate(t.time)} ${shortTime(t.time)}
-      </td>
-      <td class="px-4 py-3">
-        <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${m.c}">${m.l}</span>
-      </td>
-      <td class="px-4 py-3">
-        ${suspicious
-          ? `<span class="text-[10px] font-bold bg-red-500/15 text-red-400 px-2.5 py-0.5 rounded-full">Suspicious</span>`
-          : `<span class="text-[10px] font-medium bg-emerald-500/10 text-emerald-500 px-2.5 py-0.5 rounded-full">Clean</span>`}
-      </td>
-    </tr>`;
-  });
-
-  html += `</tbody></table></div></div>`;
-
-  // Pagination
-  html += `<div class="flex items-center justify-between">
-    <p class="text-xs ${DARK?"text-slate-500":"text-slate-400"}">
-      Page ${d.page} of ${d.pages} · ${d.total} transactions
-    </p>
-    <div class="flex gap-2">
-      <button onclick="loadTransactions(${d.page-1})" ${d.page<=1?"disabled":""}
-        class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors disabled:opacity-30
-        ${DARK?"bg-white/5 border-white/10 text-slate-300 hover:bg-white/10":"bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}">
-        Previous
-      </button>
-      <button onclick="loadTransactions(${d.page+1})" ${d.page>=d.pages?"disabled":""}
-        class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors disabled:opacity-30
-        ${DARK?"bg-white/5 border-white/10 text-slate-300 hover:bg-white/10":"bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}">
-        Next
-      </button>
-    </div>
-  </div>`;
-
-  html += `</div>`;
-  return html;
-}
-
-// Track the active filter for the transactions page
-let TXN_TYPE_FILTER = "all";
-function setTxnFilter(f) {
-  TXN_TYPE_FILTER = f;
-  const path = f === "all"
-    ? `/transactions?page=1&per_page=20`
-    : `/transactions?page=1&per_page=20&type=${f}`;
-  TXN_PAGE = 1;
-  apiFetch(path).then(data => { DATA.txns = { ...data, _newCount: 0 }; renderPage(); });
-}
-
-
-/* ════════════════════════════════════════════════════════════════════
-   FRAUD DETECTION PAGE
-   Source: GET /api/fraud
-   FRAUD_RESULTS is refreshed in main.py after each cashier submission,
-   so new risky cashier products appear here within one refresh cycle.
-   ════════════════════════════════════════════════════════════════════ */
-function renderFraud() {
-  if (!DATA.fraud) return loader();
-  const f = DATA.fraud;
-
-  let html = `<div class="flex flex-col gap-5">`;
-
-  html += `<div class="flex items-center gap-3 rounded-2xl border px-5 py-4
-    ${DARK?"bg-red-500/5 border-red-500/10":"bg-red-50 border-red-100"}">
-    <svg class="w-6 h-6 shrink-0 ${DARK?"text-red-400":"text-red-500"}" fill="none"
-         stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-      <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732
-               4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-    </svg>
-    <div>
-      <p class="text-sm font-bold ${DARK?"text-red-400":"text-red-600"}">
-        ${f.total_flagged} suspicious transaction${f.total_flagged!==1?"s":""} detected
-      </p>
-      <p class="text-xs mt-0.5 ${DARK?"text-red-400/60":"text-red-500/60"}">
-        Rules: high amount vs average · rapid-fire bursts · repeated exact amounts
-      </p>
-    </div>
-  </div>`;
-
-  html += `<div class="rounded-2xl border overflow-hidden
-    ${DARK?"bg-[#111827] border-white/5":"bg-white border-slate-200 shadow-sm"}">
-    <div class="overflow-x-auto"><table class="w-full text-sm">
-      <thead><tr class="${DARK?"bg-white/[0.02]":"bg-slate-50"}">
-        ${["ID","Branch","Product","Amount","Time","Type","Risk","Reasons"].map(h =>
-          `<th class="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-left
-            ${DARK?"text-slate-500":"text-slate-400"}">${h}</th>`).join("")}
-      </tr></thead><tbody>`;
-
-  f.suspicious_transactions.forEach(t => {
-    const isCashier = t.type === "cashier";
-    html += `<tr class="border-t transition-colors
-      ${DARK?"border-white/5 bg-red-500/[0.03] hover:bg-red-500/[0.07]"
-             :"border-slate-100 bg-red-50/30 hover:bg-red-50"}">
-      <td class="px-5 py-3 font-mono text-xs ${DARK?"text-slate-300":"text-slate-700"}">${t.id}</td>
-      <td class="px-5 py-3 text-xs ${DARK?"text-slate-400":"text-slate-500"}">${t.branch_name}</td>
-      <td class="px-5 py-3 text-xs ${DARK?"text-slate-400":"text-slate-500"}">
-        ${t.product_name ?? "—"}
-      </td>
-      <td class="px-5 py-3 font-mono font-bold text-xs text-red-400">${usd2(t.amount)}</td>
-      <td class="px-5 py-3 text-xs ${DARK?"text-slate-500":"text-slate-400"}">
-        ${shortDate(t.time)} ${shortTime(t.time)}
-      </td>
-      <td class="px-5 py-3">
-        <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full
-          ${isCashier?"bg-teal-500/10 text-teal-400":"bg-blue-500/10 text-blue-400"}">
-          ${isCashier?"Cashier":"POS"}
-        </span>
-      </td>
-      <td class="px-5 py-3">
-        <div class="flex items-center gap-2">
-          <div class="w-12 h-1.5 rounded-full overflow-hidden
-            ${DARK?"bg-slate-700":"bg-slate-200"}">
-            <div class="h-full rounded-full bg-red-500" style="width:${t.risk_score}%"></div>
-          </div>
-          <span class="text-[10px] font-bold text-red-400">${t.risk_score}%</span>
-        </div>
-      </td>
-      <td class="px-5 py-3">
-        <div class="flex flex-col gap-0.5">
-          ${t.reasons.map(r =>
-            `<span class="text-[10px] text-red-400/80">${r}</span>`).join("")}
-        </div>
-      </td>
-    </tr>`;
-  });
-
-  html += `</tbody></table></div></div></div>`;
-  return html;
-}
-
-
-/* ════════════════════════════════════════════════════════════════════
-   ALERTS PAGE
-   Source: GET /api/fraud  (alerts array)
-   Each alert is one fraud reason from one flagged transaction.
-   Cashier-sourced alerts show a teal "Cashier" origin badge.
-   ════════════════════════════════════════════════════════════════════ */
-function renderAlerts() {
-  if (!DATA.fraud) return loader();
-  const alerts = DATA.fraud.alerts;
-  if (!alerts.length) {
-    return `<div class="text-center py-16 text-sm ${DARK?"text-slate-500":"text-slate-400"}">
-      No alerts — system is clean ✓
-    </div>`;
-  }
-
-  return `<div class="flex flex-col gap-3">
-    ${alerts.map((a, i) => {
-      const isCashier = a.type === "cashier";
-      return `<div class="rounded-2xl border px-5 py-4 flex items-start gap-4 transition-all
-        fade-in ${DARK?"bg-[#111827] border-white/5 hover:border-red-500/20"
-                      :"bg-white border-slate-200 hover:border-red-200 shadow-sm"}"
-        style="animation-delay:${i*30}ms">
-        <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5
-          ${a.risk_score>=70?"bg-red-500/10 text-red-400":"bg-amber-500/10 text-amber-400"}">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-            <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732
-                     4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-          </svg>
-        </div>
-        <div class="flex-1 min-w-0">
-          <div class="flex items-start justify-between gap-3">
-            <p class="text-sm font-semibold ${DARK?"text-white":"text-slate-900"}">${a.message}</p>
-            <div class="flex gap-1.5 shrink-0">
-              ${isCashier
-                ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full
-                    bg-teal-500/10 text-teal-400">Cashier</span>`
-                : ""}
-              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full
-                ${a.risk_score>=70
-                  ?"bg-red-500/15 text-red-400"
-                  :"bg-amber-500/15 text-amber-500"}">Risk ${a.risk_score}%</span>
-            </div>
-          </div>
-          <p class="text-xs mt-1 ${DARK?"text-slate-500":"text-slate-400"}">
-            ${a.branch_name} · ${a.transaction_id} · ${usd2(a.amount)} ·
-            ${shortDate(a.time)} ${shortTime(a.time)}
-          </p>
-        </div>
-      </div>`;
-    }).join("")}
-  </div>`;
-}
-
-
-/* ════════════════════════════════════════════════════════════════════
-   ANALYTICS PAGE
-   Source: GET /api/charts/sales-over-time  +  /api/charts/branch-breakdown
-   The line chart's x-axis extends to today's date when cashier data
-   exists for it (main.py adds today_str to the buckets dict).
-   The branch bar chart now has a third "cashier_count" series.
-   ════════════════════════════════════════════════════════════════════ */
-function renderCharts() {
-  if (!DATA.lineChart || !DATA.barChart) return loader();
-  return `<div class="grid grid-cols-1 gap-6">
-    ${card("fade-in fade-in-1",
-      `<h3 class="text-xs font-bold uppercase tracking-wider mb-4
-         ${DARK?"text-slate-500":"text-slate-400"}">
-         Sales Over Time — Last 14+ Days
-       </h3>
-       ${lineChart(DATA.lineChart.labels, DATA.lineChart.values)}`)}
-    ${card("fade-in fade-in-2",
-      `<h3 class="text-xs font-bold uppercase tracking-wider mb-4
-         ${DARK?"text-slate-500":"text-slate-400"}">
-         Transactions per Branch
-       </h3>
-       ${barChart(DATA.barChart.branches, "name", "transactions", "bg-violet-500")}`)}
-    ${card("fade-in fade-in-3",
-      `<h3 class="text-xs font-bold uppercase tracking-wider mb-4
-         ${DARK?"text-slate-500":"text-slate-400"}">
-         Revenue per Branch (incl. Cashier)
-       </h3>
-       ${barChart(DATA.barChart.branches, "name", "sales", "bg-teal-500")}`)}
-    ${card("fade-in fade-in-4",
-      `<h3 class="text-xs font-bold uppercase tracking-wider mb-4
-         ${DARK?"text-slate-500":"text-slate-400"}">
-         Cashier Submissions per Branch
-       </h3>
-       ${DATA.barChart.branches.some(b=>b.cashier_count>0)
-         ? barChart(DATA.barChart.branches, "name", "cashier_count", "bg-cyan-500")
-         : `<p class="text-xs ${DARK?"text-slate-600":"text-slate-400"} text-center py-8">
-              No cashier submissions yet
-            </p>`}`)}
-  </div>`;
-}
-
-
-/* ════════════════════════════════════════════════════════════════════
-   CASHIER PRODUCTS PAGE
-   Source: GET /api/products
-   Raw batch-level view: shows each submitted batch, its products,
-   branch, note, total, and timestamp.
-   ════════════════════════════════════════════════════════════════════ */
-function renderProducts() {
-  if (!DATA.products) return loader();
-  const d = DATA.products;
-
-  let html = `<div class="flex flex-col gap-5">`;
-
-  // Summary cards
-  html += `<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-    ${statCard("Total Batches",   d.total_batches,         null, "teal",  1)}
-    ${statCard("Total Products",  d.total_products,        null, "blue",  2)}
-    ${statCard("Grand Total",     usd(d.grand_total ?? 0), null, "amber", 3)}
-  </div>`;
-
-  if (!d.batches.length) {
-    html += `<div class="rounded-2xl border p-12 text-center fade-in
-      ${DARK?"bg-[#111827] border-white/5":"bg-white border-slate-200 shadow-sm"}">
-      <p class="text-sm font-semibold ${DARK?"text-slate-400":"text-slate-500"}">
-        No batches yet
-      </p>
-      <p class="text-xs mt-1 ${DARK?"text-slate-600":"text-slate-400"}">
-        Submit products from the cashier page — they will appear here and update all other pages.
-      </p>
-    </div>`;
-    return html + `</div>`;
-  }
-
-  html += `<div class="flex flex-col gap-4">`;
-  d.batches.forEach((batch, i) => {
-    html += `<div class="rounded-2xl border overflow-hidden fade-in fade-in-${Math.min(i+1,4)}
-      ${DARK?"bg-[#111827] border-white/5":"bg-white border-slate-200 shadow-sm"}">
-      <!-- Batch header -->
-      <div class="flex flex-wrap items-center gap-3 px-5 py-4 border-b
-        ${DARK?"border-white/5":"border-slate-100"}">
-        <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0
-          bg-teal-500/10 text-teal-400">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75"
-               viewBox="0 0 24 24">
-            <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-          </svg>
-        </div>
-        <div class="flex-1 min-w-0">
-          <p class="text-sm font-bold font-mono ${DARK?"text-teal-400":"text-teal-600"}">
-            ${batch.batch_id}
-          </p>
-          <p class="text-xs mt-0.5 ${DARK?"text-slate-500":"text-slate-400"}">
-            ${batch.branch_name} ·
-            ${new Date(batch.submitted_at).toLocaleString("en-US",
-              {month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}
-          </p>
-        </div>
-        <div class="text-right shrink-0">
-          <p class="text-sm font-extrabold ${DARK?"text-white":"text-slate-900"}">
-            ${usd2(batch.total)}
-          </p>
-          <p class="text-[10px] ${DARK?"text-slate-500":"text-slate-400"}">
-            ${batch.count} item${batch.count!==1?"s":""}
-          </p>
-        </div>
-      </div>
-      ${batch.cashier_note
-        ? `<div class="px-5 py-2 text-xs italic border-b
-             ${DARK?"text-slate-500 bg-white/[0.01] border-white/5"
-                   :"text-slate-400 bg-slate-50 border-slate-100"}">
-             📝 ${batch.cashier_note}
-           </div>` : ""}
-      <!-- Products table -->
-      <table class="w-full text-sm">
-        <thead><tr class="${DARK?"bg-white/[0.02]":"bg-slate-50/60"}">
-          <th class="px-5 py-2.5 text-[10px] font-bold uppercase tracking-wider text-left
-            ${DARK?"text-slate-500":"text-slate-400"}">#</th>
-          <th class="px-5 py-2.5 text-[10px] font-bold uppercase tracking-wider text-left
-            ${DARK?"text-slate-500":"text-slate-400"}">Product Name</th>
-          <th class="px-5 py-2.5 text-[10px] font-bold uppercase tracking-wider text-right
-            ${DARK?"text-slate-500":"text-slate-400"}">Price</th>
-        </tr></thead>
-        <tbody>
-          ${batch.products.map((p, j) => `
-          <tr class="border-t ${DARK?"border-white/5 hover:bg-white/[0.02]"
-                                     :"border-slate-100 hover:bg-slate-50/50"}">
-            <td class="px-5 py-2.5 text-xs font-mono ${DARK?"text-slate-600":"text-slate-400"}">
-              ${j+1}
-            </td>
-            <td class="px-5 py-2.5 text-xs font-medium ${DARK?"text-slate-200":"text-slate-700"}">
-              ${p.name}
-            </td>
-            <td class="px-5 py-2.5 text-xs font-mono font-bold text-right text-teal-500">
-              ${usd2(p.price)}
-            </td>
-          </tr>`).join("")}
-        </tbody>
-      </table>
-    </div>`;
-  });
-
-  html += `</div></div>`;
-  return html;
-}
-
-
-/* ════════════════════════════════════════════════════════════════════
-   CHART RENDERERS  (SVG, no external library)
-   ════════════════════════════════════════════════════════════════════ */
-function lineChart(labels, values) {
+function lineChartSVG(labels, values) {
   if (!labels?.length) return "";
-  const max   = Math.max(...values);
-  const min   = Math.min(...values);
-  const range = max - min || 1;
-  const W = 600, H = 180, PAD = 30;
-
-  const pts = labels.map((l, i) => ({
-    x: PAD + (i / (labels.length - 1)) * (W - PAD * 2),
-    y: H - PAD - ((values[i] - min) / range) * (H - PAD * 2),
-    label: l.slice(5),    // strip "2026-"
-    val: values[i],
+  const max=Math.max(...values), min=Math.min(...values), range=max-min||1;
+  const W=600, H=180, PAD=30;
+  const pts = labels.map((l,i)=>({
+    x: PAD+(i/(labels.length-1))*(W-PAD*2),
+    y: H-PAD-((values[i]-min)/range)*(H-PAD*2),
+    label: l.slice(5), val:values[i],
   }));
-
-  const pathD = pts.map((p, i) => `${i===0?"M":"L"}${p.x},${p.y}`).join(" ");
-  const areaD = pathD + ` L${pts.at(-1).x},${H-PAD} L${pts[0].x},${H-PAD} Z`;
-
-  return `<svg viewBox="0 0 ${W} ${H}" class="w-full" style="max-height:200px">
+  const pathD = pts.map((p,i)=>`${i===0?"M":"L"}${p.x},${p.y}`).join(" ");
+  const areaD = pathD+` L${pts.at(-1).x},${H-PAD} L${pts[0].x},${H-PAD} Z`;
+  const axisColor = DARK?"#475569":"#94a3b8";
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-height:200px;display:block">
     <defs>
       <linearGradient id="lg" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%"   stop-color="#14b8a6" stop-opacity=".25"/>
@@ -1027,35 +1065,364 @@ function lineChart(labels, values) {
       </linearGradient>
     </defs>
     <path d="${areaD}" fill="url(#lg)"/>
-    <path d="${pathD}" fill="none" stroke="#14b8a6" stroke-width="2.5"
-          stroke-linecap="round" stroke-linejoin="round"/>
-    ${pts.map(p => `<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="#14b8a6"/>`).join("")}
-    ${pts.filter((_,i) => i % 2 === 0).map(p =>
-      `<text x="${p.x}" y="${H-8}" text-anchor="middle" font-size="9"
-             fill="${DARK?"#475569":"#94a3b8"}">${p.label}</text>`).join("")}
+    <path d="${pathD}" fill="none" stroke="#14b8a6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    ${pts.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="#14b8a6"/>`).join("")}
+    ${pts.filter((_,i)=>i%2===0).map(p=>
+      `<text x="${p.x}" y="${H-8}" text-anchor="middle" font-size="9" fill="${axisColor}">${p.label}</text>`
+    ).join("")}
   </svg>`;
 }
 
-function barChart(data, labelKey, valKey, colorClass) {
-  if (!data?.length) return `<p class="text-xs text-slate-500">No data</p>`;
-  const max = Math.max(...data.map(d => d[valKey])) || 1;
-  return `<div class="flex items-end gap-2 h-48 mt-2">
-    ${data.map(d => {
-      const h = Math.max((d[valKey] / max) * 100, 2);
-      const label = d[labelKey].split(" ")[0];
-      return `<div class="flex-1 flex flex-col items-center gap-1">
-        <span class="text-[9px] font-bold ${DARK?"text-slate-400":"text-slate-500"}">
-          ${valKey==="sales" ? usd(d[valKey]) : d[valKey]}
-        </span>
-        <div class="w-full rounded-t-md chart-bar ${colorClass}" style="height:${h}%"></div>
-        <span class="text-[9px] ${DARK?"text-slate-600":"text-slate-400"} truncate max-w-full">
-          ${label}
-        </span>
+function barChart(data, labelKey, valKey, color) {
+  if (!data?.length) return `<p style="font-size:0.75rem;color:#64748b">No data</p>`;
+  const max = Math.max(...data.map(d=>d[valKey]))||1;
+  return `<div class="chart-bars">
+    ${data.map(d=>{
+      const h = Math.max((d[valKey]/max)*100,2);
+      const lbl = d[labelKey].split(" ")[0];
+      return `<div class="chart-bar-col">
+        <span class="chart-bar-val">${valKey==="sales"?usd(d[valKey]):d[valKey]}</span>
+        <div class="chart-bar-rect" style="background:${color};height:${h}%"></div>
+        <span class="chart-bar-lbl">${lbl}</span>
       </div>`;
     }).join("")}
   </div>`;
 }
 
+/* ════════════════════════════════════════════════════════════════════
+   OVERVIEW
+   ════════════════════════════════════════════════════════════════════ */
+function renderOverview() {
+  if (!DATA.sales) return loader();
+  const s = DATA.sales;
+  let h = `<div class="page-col">`;
+
+  h += `<div class="stat-grid">
+    ${statCard("Daily Sales",        usd(s.daily.total),        s.daily.change_pct,  "teal",   1)}
+    ${statCard("Weekly Sales",       usd(s.weekly.total),       s.weekly.change_pct, "blue",   2)}
+    ${statCard("Total Transactions", s.total_transactions,      null,                "amber",  3)}
+    ${statCard("Active Branches",    s.active_branches,         null,                "violet", 4)}
+  </div>`;
+
+  if (s.cashier_today > 0) {
+    h += `<div class="banner teal ${DARK?"dark":"light"}">
+      <svg fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+        <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+      </svg>
+      <p><strong>${s.cashier_today} cashier transaction${s.cashier_today!==1?"s":""}</strong>
+        submitted today and reflected across all pages.</p>
+    </div>`;
+  }
+
+  if (s.total_flagged > 0) {
+    h += `<div class="banner red ${DARK?"dark":"light"}">
+      <svg fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+        <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+      </svg>
+      <p><strong>${s.total_flagged} suspicious transaction${s.total_flagged!==1?"s":""}</strong>
+        flagged. <button onclick="navigate('fraud')"
+          style="text-decoration:underline;font-weight:600;background:none;border:none;cursor:pointer;color:inherit;font:inherit">View →</button></p>
+    </div>`;
+  }
+
+  h += `<div class="grid-2">
+    <div class="db-card anim-fade-in" style="animation-delay:.10s">
+      <p class="section-title">Sales — Last 14 Days</p>
+      ${DATA.lineChart ? lineChartSVG(DATA.lineChart.labels, DATA.lineChart.values) : loader()}
+    </div>
+    <div class="db-card anim-fade-in" style="animation-delay:.15s">
+      <p class="section-title">Revenue by Branch</p>
+      ${DATA.barChart ? barChart(DATA.barChart.branches,"name","sales","#14b8a6") : loader()}
+    </div>
+  </div>`;
+
+  return h + `</div>`;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   BRANCHES
+   ════════════════════════════════════════════════════════════════════ */
+function renderBranches() {
+  if (!DATA.branches) return loader();
+  return `<div class="grid-3">
+    ${DATA.branches.branches.map((b,i)=>`
+    <div class="branch-card anim-fade-in" style="animation-delay:${Math.min(i,3)*50}ms">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+        <div>
+          <h3 style="font-weight:700;font-size:0.875rem;color:${DARK?"#fff":"#0f172a"}">${b.name}</h3>
+          <p style="font-size:0.75rem;margin-top:0.125rem;color:${DARK?"#64748b":"#94a3b8"}">${b.city} · ${b.id}</p>
+        </div>
+        <span style="font-size:10px;font-weight:700;text-transform:uppercase;padding:0.25rem 0.625rem;border-radius:9999px;
+          background:${b.status==="active"?"rgba(16,185,129,0.10)":"rgba(100,116,139,0.10)"};
+          color:${b.status==="active"?"#10b981":"#94a3b8"}">${b.status}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem">
+        ${[["Sales",usd(b.total_sales),null],["Txns",b.transaction_count,null],
+           ["Cashier",b.cashier_count,b.cashier_count>0?"#2dd4bf":null],
+           ["Flagged",b.flagged_count,b.flagged_count>0?"#f87171":null]].map(([l,v,c])=>`
+        <div style="text-align:center">
+          <p style="font-size:1rem;font-weight:800;color:${c||(DARK?"#fff":"#0f172a")}">${v}</p>
+          <p style="font-size:10px;color:${DARK?"#64748b":"#94a3b8"}">${l}</p>
+        </div>`).join("")}
+      </div>
+    </div>`).join("")}
+  </div>`;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   TRANSACTIONS
+   ════════════════════════════════════════════════════════════════════ */
+function renderTxns() {
+  if (!DATA.txns) { loadTxns(1); return loader(); }
+  const d = DATA.txns;
+  const dk = DARK;
+
+  let h = `<div class="page-col2">`;
+
+  // Filter row
+  h += `<div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center">
+    ${["all","cashier","pos"].map(f=>{
+      const lbl = f==="all"?"All":f==="cashier"?"🛒 Cashier Only":"POS Only";
+      const active = TXN_FILTER===f;
+      const s = active
+        ? `background:${dk?"rgba(20,184,166,0.15)":"rgba(20,184,166,0.08)"};border-color:${dk?"rgba(20,184,166,0.30)":"#99f6e4"};color:${dk?"#2dd4bf":"#0f766e"}`
+        : `background:transparent;border-color:${dk?"rgba(255,255,255,0.10)":"#e2e8f0"};color:${dk?"#94a3b8":"#64748b"}`;
+      return `<button class="filter-btn" onclick="setTxnFilter('${f}')" style="${s}">${lbl}</button>`;
+    }).join("")}
+    <span style="margin-left:auto;font-size:0.75rem;color:${dk?"#64748b":"#94a3b8"}">${d.total} transactions</span>
+  </div>`;
+
+  h += `<div class="table-card"><div class="table-scroll">
+    <table class="data-table">
+      <thead><tr>
+        ${["ID","Branch","Product","Amount","Time","Method","Status"].map(col=>
+          `<th>${col}</th>`).join("")}
+      </tr></thead><tbody>`;
+
+  d.items.forEach((t,i)=>{
+    const isCashier = t.type==="cashier";
+    const isNew     = i < (d._newCount??0);
+    const suspicious = t.suspicious;
+    let rowBg = "transparent";
+    if (suspicious) rowBg = dk?"rgba(239,68,68,0.04)":"rgba(254,242,242,0.50)";
+    else if (isCashier) rowBg = dk?"rgba(20,184,166,0.03)":"rgba(240,253,250,0.30)";
+
+    h += `<tr style="background:${rowBg};${isNew?"animation:flash-in 1.8s ease-out":""}" >
+      <td style="font-family:var(--font-mono);font-size:0.75rem;color:${dk?"#cbd5e1":"#334155"}">${t.id}</td>
+      <td style="font-size:0.75rem;color:${dk?"#94a3b8":"#64748b"}">${t.branch_name}</td>
+      <td style="font-size:0.75rem;color:${dk?"#94a3b8":"#64748b"}">
+        ${t.product_name
+          ? `<span style="font-weight:500;color:${dk?"#e2e8f0":"#334155"}">${t.product_name}</span>`
+          : `<span style="color:${dk?"#334155":"#cbd5e1"}">—</span>`}
+      </td>
+      <td style="font-family:var(--font-mono);font-weight:700;font-size:0.75rem;
+        color:${suspicious?"#f87171":isCashier?"#2dd4bf":"#14b8a6"}">${usd2(t.amount)}</td>
+      <td style="font-size:0.75rem;color:${dk?"#64748b":"#94a3b8"}">${sDt(t.time)} ${sTm(t.time)}</td>
+      <td>${methodBadge(t.payment_method)}</td>
+      <td>${suspicious
+        ? `<span style="font-size:10px;font-weight:700;background:rgba(239,68,68,0.15);color:#f87171;padding:0.125rem 0.625rem;border-radius:9999px">Suspicious</span>`
+        : `<span style="font-size:10px;font-weight:500;background:rgba(16,185,129,0.10);color:#10b981;padding:0.125rem 0.625rem;border-radius:9999px">Clean</span>`}
+      </td>
+    </tr>`;
+  });
+
+  h += `</tbody></table></div></div>`;
+
+  h += `<div style="display:flex;align-items:center;justify-content:space-between">
+    <p style="font-size:0.75rem;color:${dk?"#64748b":"#94a3b8"}">Page ${d.page} of ${d.pages} · ${d.total} transactions</p>
+    <div style="display:flex;gap:0.5rem">
+      <button class="page-btn" onclick="loadTxns(${d.page-1})" ${d.page<=1?"disabled":""}>Previous</button>
+      <button class="page-btn" onclick="loadTxns(${d.page+1})" ${d.page>=d.pages?"disabled":""}>Next</button>
+    </div>
+  </div>`;
+
+  return h + `</div>`;
+}
+
+function setTxnFilter(f) {
+  TXN_FILTER = f;
+  loadTxns(1);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   FRAUD
+   ════════════════════════════════════════════════════════════════════ */
+function renderFraud() {
+  if (!DATA.fraud) return loader();
+  const f = DATA.fraud; const dk = DARK;
+  let h = `<div class="page-col2">`;
+
+  h += `<div class="banner red ${dk?"dark":"light"}">
+    <svg fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+      <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+    </svg>
+    <div>
+      <p style="font-weight:700">${f.total_flagged} suspicious transaction${f.total_flagged!==1?"s":""} detected</p>
+      <p style="font-size:0.75rem;opacity:.6;margin-top:2px">Rules: high amount vs average · rapid-fire bursts · repeated exact amounts</p>
+    </div>
+  </div>`;
+
+  h += `<div class="table-card"><div class="table-scroll">
+    <table class="data-table"><thead><tr>
+      ${["ID","Branch","Product","Amount","Time","Type","Risk","Reasons"].map(c=>`<th>${c}</th>`).join("")}
+    </tr></thead><tbody>`;
+
+  f.suspicious_transactions.forEach(t=>{
+    const isCashier = t.type==="cashier";
+    h += `<tr style="background:${dk?"rgba(239,68,68,0.03)":"rgba(254,242,242,0.30)"}">
+      <td style="font-family:var(--font-mono);font-size:0.75rem;color:${dk?"#cbd5e1":"#334155"}">${t.id}</td>
+      <td style="font-size:0.75rem;color:${dk?"#94a3b8":"#64748b"}">${t.branch_name}</td>
+      <td style="font-size:0.75rem;color:${dk?"#94a3b8":"#64748b"}">${t.product_name??"—"}</td>
+      <td style="font-family:var(--font-mono);font-weight:700;font-size:0.75rem;color:#f87171">${usd2(t.amount)}</td>
+      <td style="font-size:0.75rem;color:${dk?"#64748b":"#94a3b8"}">${sDt(t.time)} ${sTm(t.time)}</td>
+      <td><span style="font-size:10px;font-weight:700;text-transform:uppercase;padding:0.125rem 0.5rem;border-radius:9999px;
+        background:${isCashier?"rgba(20,184,166,0.10)":"rgba(59,130,246,0.10)"};
+        color:${isCashier?"#2dd4bf":"#60a5fa"}">${isCashier?"Cashier":"POS"}</span></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:0.5rem">
+          <div class="risk-bar-bg"><div class="risk-bar-fill" style="width:${t.risk_score}%"></div></div>
+          <span style="font-size:10px;font-weight:700;color:#f87171">${t.risk_score}%</span>
+        </div>
+      </td>
+      <td>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          ${t.reasons.map(r=>`<span style="font-size:10px;color:rgba(248,113,113,0.80)">${r}</span>`).join("")}
+        </div>
+      </td>
+    </tr>`;
+  });
+
+  return h + `</tbody></table></div></div></div>`;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   ALERTS
+   ════════════════════════════════════════════════════════════════════ */
+function renderAlerts() {
+  if (!DATA.fraud) return loader();
+  const alerts = DATA.fraud.alerts;
+  if (!alerts.length) return `<div style="text-align:center;padding:4rem 0;font-size:0.875rem;color:#64748b">No alerts — system is clean ✓</div>`;
+
+  return `<div class="page-col2">
+    ${alerts.map((a,i)=>{
+      const isHigh    = a.risk_score>=70;
+      const isCashier = a.type==="cashier";
+      return `<div class="alert-item anim-fade-in" style="animation-delay:${i*30}ms">
+        <div style="width:2.25rem;height:2.25rem;border-radius:0.75rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;
+          background:${isHigh?"rgba(239,68,68,0.10)":"rgba(245,158,11,0.10)"};color:${isHigh?"#f87171":"#fbbf24"}">
+          <svg style="width:1rem;height:1rem" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+            <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem">
+            <p style="font-size:0.875rem;font-weight:600;color:${DARK?"#fff":"#0f172a"}">${a.message}</p>
+            <div style="display:flex;gap:0.375rem;flex-shrink:0">
+              ${isCashier?`<span style="font-size:10px;font-weight:700;padding:0.125rem 0.5rem;border-radius:9999px;background:rgba(20,184,166,0.10);color:#2dd4bf">Cashier</span>`:""}
+              <span style="font-size:10px;font-weight:700;padding:0.125rem 0.5rem;border-radius:9999px;
+                background:${isHigh?"rgba(239,68,68,0.15)":"rgba(245,158,11,0.15)"};
+                color:${isHigh?"#f87171":"#f59e0b"}">Risk ${a.risk_score}%</span>
+            </div>
+          </div>
+          <p style="font-size:0.75rem;margin-top:0.25rem;color:${DARK?"#64748b":"#94a3b8"}">
+            ${a.branch_name} · ${a.transaction_id} · ${usd2(a.amount)} · ${sDt(a.time)} ${sTm(a.time)}
+          </p>
+        </div>
+      </div>`;
+    }).join("")}
+  </div>`;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   ANALYTICS
+   ════════════════════════════════════════════════════════════════════ */
+function renderCharts() {
+  if (!DATA.lineChart||!DATA.barChart) return loader();
+  return `<div class="page-col">
+    <div class="db-card anim-fade-in" style="animation-delay:.05s">
+      <p class="section-title">Sales Over Time — Last 14+ Days</p>
+      ${lineChartSVG(DATA.lineChart.labels, DATA.lineChart.values)}
+    </div>
+    <div class="db-card anim-fade-in" style="animation-delay:.10s">
+      <p class="section-title">Transactions per Branch</p>
+      ${barChart(DATA.barChart.branches,"name","transactions","#8b5cf6")}
+    </div>
+    <div class="db-card anim-fade-in" style="animation-delay:.15s">
+      <p class="section-title">Revenue per Branch (incl. Cashier)</p>
+      ${barChart(DATA.barChart.branches,"name","sales","#14b8a6")}
+    </div>
+    <div class="db-card anim-fade-in" style="animation-delay:.20s">
+      <p class="section-title">Cashier Submissions per Branch</p>
+      ${DATA.barChart.branches.some(b=>b.cashier_count>0)
+        ? barChart(DATA.barChart.branches,"name","cashier_count","#06b6d4")
+        : `<p style="font-size:0.75rem;text-align:center;padding:2rem 0;color:${DARK?"#475569":"#94a3b8"}">No cashier submissions yet</p>`}
+    </div>
+  </div>`;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   CASHIER PRODUCTS
+   ════════════════════════════════════════════════════════════════════ */
+function renderProducts() {
+  if (!DATA.products) return loader();
+  const d = DATA.products; const dk = DARK;
+
+  let h = `<div class="page-col2">`;
+
+  h += `<div class="stat-grid">
+    ${statCard("Total Batches",  d.total_batches,         null, "teal",  1)}
+    ${statCard("Total Products", d.total_products,        null, "blue",  2)}
+    ${statCard("Grand Total",    usd(d.grand_total??0),   null, "amber", 3)}
+  </div>`;
+
+  if (!d.batches.length) {
+    h += `<div class="db-card" style="text-align:center;padding:3rem">
+      <p style="font-weight:600;color:${dk?"#94a3b8":"#64748b"}">No batches yet</p>
+      <p style="font-size:0.75rem;margin-top:0.25rem;color:${dk?"#475569":"#94a3b8"}">
+        Submit products from the cashier page — they appear here immediately.</p>
+    </div>`;
+    return h + `</div>`;
+  }
+
+  d.batches.forEach((batch,i)=>{
+    h += `<div class="batch-card anim-fade-in" style="animation-delay:${Math.min(i,3)*50}ms">
+      <div class="batch-header">
+        <div style="width:2.25rem;height:2.25rem;border-radius:0.75rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:rgba(20,184,166,0.10);color:#2dd4bf">
+          <svg style="width:1rem;height:1rem" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+            <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+          </svg>
+        </div>
+        <div style="flex:1;min-width:0">
+          <p style="font-size:0.875rem;font-weight:700;font-family:var(--font-mono);color:${dk?"#2dd4bf":"#0d9488"}">${batch.batch_id}</p>
+          <p style="font-size:0.75rem;margin-top:2px;color:${dk?"#64748b":"#94a3b8"}">
+            ${batch.branch_name} · ${new Date(batch.submitted_at).toLocaleString("en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}
+          </p>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <p style="font-size:0.875rem;font-weight:800;color:${dk?"#fff":"#0f172a"}">${usd2(batch.total)}</p>
+          <p style="font-size:10px;color:${dk?"#64748b":"#94a3b8"}">${batch.count} item${batch.count!==1?"s":""}</p>
+        </div>
+      </div>
+      ${batch.cashier_note?`<div style="padding:0.5rem 1.25rem;font-size:0.75rem;font-style:italic;
+        border-bottom:1px solid ${dk?"rgba(255,255,255,0.05)":"#f1f5f9"};
+        color:${dk?"#64748b":"#94a3b8"}">📝 ${batch.cashier_note}</div>`:""}
+      <table class="data-table">
+        <thead><tr>
+          <th>#</th><th>Product Name</th><th style="text-align:right">Price</th>
+        </tr></thead>
+        <tbody>
+          ${batch.products.map((p,j)=>`<tr>
+            <td style="font-family:var(--font-mono);font-size:0.75rem;color:${dk?"#475569":"#94a3b8"}">${j+1}</td>
+            <td style="font-size:0.75rem;font-weight:500;color:${dk?"#e2e8f0":"#334155"}">${p.name}</td>
+            <td style="font-family:var(--font-mono);font-weight:700;font-size:0.75rem;text-align:right;color:#14b8a6">${usd2(p.price)}</td>
+          </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`;
+  });
+
+  return h + `</div>`;
+}
 
 /* ════════════════════════════════════════════════════════════════════
    BOOT
