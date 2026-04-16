@@ -37,7 +37,7 @@ import uuid
 from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Optional
-
+from fastapi.responses import FileResponse
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -540,3 +540,7 @@ def get_products(_user: str = Depends(_verify_token)):
         "total_products": sum(b["count"] for b in PRODUCT_BATCHES),
         "grand_total":    round(sum(b["total"] for b in PRODUCT_BATCHES), 2),
     }
+
+@app.get("/")
+async def read_index():
+    return FileResponse('index.html')
